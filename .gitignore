@@ -1,0 +1,8 @@
+node_modules/
+.openai/
+.env
+.env.*
+*.json.backup
+*backup*.json
+.DS_Store
+Thumbs.db
