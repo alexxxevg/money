@@ -33,6 +33,18 @@ export function eventTotals(event) {
   return {collected,transferred,expected,remaining:collected-transferred,received,complete};
 }
 export const debtRemaining = debt => debt.amount-debt.repayments.reduce((a,p)=>a+p.amount,0);
+export function currentCollectionVisible(event, people) {
+  return !event.closed && !(event.kind==='birthday' && people.some(p=>p.id===event.recipientId&&!p.active));
+}
+export function sortedPeople(people) {
+  return [...people].sort((a,b)=>Number(b.active)-Number(a.active)||(a.birthday||'99-99').localeCompare(b.birthday||'99-99')||a.name.localeCompare(b.name,'ru'));
+}
+export function cancelPayment(event, paymentId) {
+  const index=event.payments.findIndex(p=>p.id===paymentId);
+  if(index<0)throw new Error('Взнос уже отменён или изменён.');
+  event.payments.splice(index,1);
+  event.collectionClosed=false;event.closed=false;
+}
 export function settledHistoryCandidates(data, cutoff=today()) {
   return data.events.filter(e=>!e.closed&&!e.monthly&&e.date<cutoff&&e.payments.length&&e.payments.every(p=>p.note.startsWith('Excel '))&&eventTotals(e).collected>0&&eventTotals(e).remaining===0);
 }

@@ -12,3 +12,6 @@ dialog{width:min(520px,calc(100% - 28px));max-height:calc(100dvh - 32px);border:
 .auth-card .brand{font-size:32px}.auth-card h1{font-size:36px;margin:8px 0}.auth-eyebrow{font-size:11px;letter-spacing:2px;color:#246a59;margin-top:38px}.auth-card form{margin-top:26px}.auth-card .field{display:block;margin-bottom:18px}.auth-card .field input{display:block;margin-top:6px}.auth-card input{min-height:50px}.auth-card .primary{min-height:50px}.auth-card .textlink{margin-top:22px}.auth-note{text-align:center;margin-top:30px}.auth-card .error:empty{display:none}@media(max-width:480px){.auth-screen{align-items:flex-start;padding:70px 20px 30px}.auth-card{padding:10px 2px;border:0;background:transparent;box-shadow:none}}
 
 @media(prefers-color-scheme:dark){.auth-screen{background:radial-gradient(ellipse at top left,#18362d,transparent 65%),var(--bg)}.auth-card{border-color:var(--line)}}
+
+.person-row:has(.cancel-payment){flex-wrap:wrap}
+.person-row .cancel-payment{font-size:12px;min-height:44px;padding:6px 8px;white-space:nowrap;margin-left:auto;flex-basis:100%;text-align:right}
