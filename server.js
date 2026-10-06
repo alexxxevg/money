@@ -2,7 +2,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import postgres from 'postgres';
-import { emptyData, validateData } from './dist/model.js';
+import { emptyData, validateData, preserveLegacyFields } from './dist/model.js';
 import { hashPassword, verifyPassword, tokenHash, newToken, checkCredentials, checkPasswordChange } from './security.js';
 
 const sql = postgres(process.env.DATABASE_URL, { max: 8, prepare: false, connect_timeout: 10 });
@@ -97,19 +97,9 @@ const server = http.createServer(async (req,res) => {
       }
       if (path==='/api/state' && req.method==='PUT') {
         const input=await body(req); if (!Number.isSafeInteger(input.revision)||input.revision<0) fail(400,'Некорректная версия.');
-        let data; try{data=validateData(input.data);}catch{fail(400,'Данные не прошли проверку.');}
-        // Older cached clients do not know about contribution months. Preserve the
-        // existing period for unchanged payments instead of reverting to receipt date.
         const [previous]=await sql`SELECT data FROM money_states WHERE user_id=${session.user.id} AND revision=${input.revision}`;
         if(!previous)fail(409,'На другом устройстве уже появились изменения. Загрузите актуальные данные.');
-        for(const event of data.events.filter(e=>e.monthly)){
-          const raw=input.data.events.find(e=>e.id===event.id);
-          const prior=previous.data.events.find(e=>e.id===event.id);
-          for(const payment of event.payments){
-            const supplied=raw.payments.find(p=>p.id===payment.id),old=prior?.payments.find(p=>p.id===payment.id);
-            if(supplied.month===undefined&&old?.month&&old.personId===payment.personId&&old.amount===payment.amount&&old.date===payment.date)payment.month=old.month;
-          }
-        }
+        let data; try{data=validateData(preserveLegacyFields(input.data,previous.data));}catch{fail(400,'Данные не прошли проверку.');}
         const [saved] = await sql`UPDATE money_states SET data=${sql.json(data)}, revision=revision+1, updated_at=now() WHERE user_id=${session.user.id} AND revision=${input.revision} RETURNING revision`;
         if (!saved) fail(409,'На другом устройстве уже появились изменения. Скачайте свою копию и загрузите актуальные данные.');
         return send(res,200,saved);

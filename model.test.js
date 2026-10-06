@@ -89,3 +89,23 @@ test('monthly contribution period independent of receipt date; backup preserves 
  assert.throws(()=>addPayment(e,id,30000,'2026-10-06','','2026-13'));assert.throws(()=>addPayment(d.events[0],d.events[0].participants[0].personId,30000,'2026-10-06','','2026-09'));
  e.payments[0].month='2026-00';assert.throws(()=>validateData(d));
 });
+
+test('own money reconciles deficit separately from colleague payments and permits closure',async()=>{
+ const {addOwnContribution}=await import('./dist/model.js');const d=demoData(),e=d.events[0];
+ for(const p of e.participants.filter(p=>p.included)){const left=p.expected-eventTotals(e).received(p.personId);if(left>0)addPayment(e,p.personId,left,e.date);}
+ closeCollection(e);e.outflows[0].amount=eventTotals(e).collected+10000;const ledger=JSON.stringify(e.payments);assert.throws(()=>closeEvent(e));
+ addOwnContribution(e,10000,e.date,'Added personally');assert.equal(eventTotals(e).remaining,0);assert.equal(eventTotals(e).own,10000);assert.equal(JSON.stringify(e.payments),ledger);closeEvent(e);
+ const saved=validateData(d);assert.equal(saved.events[0].ownContributions[0].amount,10000);assert.throws(()=>addOwnContribution(e,1,e.date));
+ const copied=annualCandidates(saved,Number(e.date.slice(0,4)),Number(e.date.slice(0,4))+1);assert.equal(copied[0].ownContributions.length,0);
+});
+test('maternity status excludes new participants; hides rows but preserves historical payments',async()=>{
+ const {canCollect,visibleParticipants}=await import('./dist/model.js');const d=demoData(),person=d.people[0],e=d.events[0];person.status='maternity';person.active=false;
+ const before=JSON.stringify(e.payments);assert.equal(canCollect(person),false);assert.equal(visibleParticipants(e,d.people).some(p=>p.personId===person.id),false);
+ const validated=validateData(d);assert.equal(validated.people[0].status,'maternity');assert.equal(JSON.stringify(validated.events[0].payments),before);assert.equal(validated.events[0].participants[0].included,false);
+ const next=newEvent(validated,{title:'New collection',date:e.date});assert.equal(next.participants.some(p=>p.personId===person.id),false);
+});
+test('legacy clients preserve new fields while explicit changes remain possible',async()=>{
+ const {preserveLegacyFields,addOwnContribution}=await import('./dist/model.js');const prior=validateData(demoData());prior.people[0].status='maternity';prior.people[0].active=false;addOwnContribution(prior.events[0],10000,prior.events[0].date);
+ const legacy=structuredClone(prior);delete legacy.people[0].status;delete legacy.events[0].ownContributions;const result=preserveLegacyFields(legacy,prior);assert.equal(result.people[0].status,'maternity');assert.equal(result.events[0].ownContributions[0].amount,10000);
+ legacy.events[0].ownContributions=[];assert.equal(preserveLegacyFields(legacy,prior).events[0].ownContributions.length,0);assert.equal(legacy.people[0].status,undefined);
+});
