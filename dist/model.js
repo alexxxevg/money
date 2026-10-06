@@ -51,7 +51,12 @@ export function preserveLegacyFields(value, previous) {
   }
   return data;
 }
-export const visibleParticipants = (event,people) => event.participants.filter(p=>canCollect(people.find(x=>x.id===p.personId)));
+export function sortedParticipants(participants,event) {
+  const received=new Map();
+  for(const payment of event?.payments||[])received.set(payment.personId,(received.get(payment.personId)||0)+payment.amount);
+  return [...participants].sort((a,b)=>(received.get(a.personId)||0)-(received.get(b.personId)||0)||a.name.localeCompare(b.name,'ru'));
+}
+export const visibleParticipants = (event,people) => sortedParticipants(event.participants.filter(p=>canCollect(people.find(x=>x.id===p.personId))),event);
 export function addOwnContribution(event,sum,date,note='') {
   if(event.closed)throw new Error('Сначала возобновите расчёты.');
   if(!Number.isSafeInteger(sum)||sum<=0||sum>100000000000||!validDate(date))throw new Error('Проверьте сумму и дату.');
@@ -68,8 +73,7 @@ export function collectionMonths(event) {
   return [...new Set([...Array.from({length:12},(_,i)=>`${year}-${String(i+1).padStart(2,'0')}`),...event.payments.map(paymentMonth)])].sort();
 }
 export function sortedPeople(people) {
-  const rank=p=>({working:0,maternity:1,inactive:2})[employmentStatus(p)];
-  return [...people].sort((a,b)=>rank(a)-rank(b)||(a.birthday||'99-99').localeCompare(b.birthday||'99-99')||a.name.localeCompare(b.name,'ru'));
+  return [...people].sort((a,b)=>a.name.localeCompare(b.name,'ru'));
 }
 export function cancelPayment(event, paymentId) {
   const index=event.payments.findIndex(p=>p.id===paymentId);
