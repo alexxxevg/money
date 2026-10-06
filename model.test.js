@@ -52,3 +52,15 @@ test('Backup validation rejects tampering and preserves a valid roundtrip',()=>{
  const unknown=structuredClone(d);unknown.events[0].payments[0].personId='unknown';assert.throws(()=>validateData(unknown));
  const script=structuredClone(d);script.people[0].name='<img onerror=alert(1)>';assert.equal(validateData(script).people[0].name,'<img onerror=alert(1)>');
 });
+
+test('historical closure preserves ledger, reconciles plan; candidates exclude future, monthly and unbalanced',async()=>{
+ const {settledHistoryCandidates,finishSettledHistory}=await import('./dist/model.js');
+ const data=demoData(),event=data.events[0];event.date='2023-01-01';event.payments.forEach(p=>p.note='Excel 2023');event.outflows[0].amount=eventTotals(event).collected;
+ const ledger=JSON.stringify([event.payments,event.outflows]);
+ assert.equal(settledHistoryCandidates(data,'2026-10-06').length,1);
+ event.monthly=true;assert.equal(settledHistoryCandidates(data,'2026-10-06').length,0);event.monthly=false;
+ event.date='2027-01-01';assert.equal(settledHistoryCandidates(data,'2026-10-06').length,0);event.date='2023-01-01';
+ event.outflows[0].amount--;assert.equal(settledHistoryCandidates(data,'2026-10-06').length,0);assert.throws(()=>finishSettledHistory(event));event.outflows[0].amount++;
+ finishSettledHistory(event);assert.equal(event.closed,true);assert.equal(eventTotals(event).complete,true);
+ assert.equal(JSON.stringify([event.payments,event.outflows]),ledger);validateData(data);
+});
