@@ -1,12 +1,5 @@
-const CACHE = 'svoi-dengi-account-v10';
-const ASSETS = ['./','./index.html','./app.css','./app.js','./model.js','./auth.js','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./icon-maskable.png'];
-self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())));
-self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('svoi-dengi-') && key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())));
-self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;
-  const url = new URL(event.request.url);
-  // Cache only the app shell; sign-in responses and unrelated endpoints stay on the network.
-  const relative = url.pathname.slice(new URL(self.registration.scope).pathname.length);
-  if (!['','index.html','app.css','app.js','model.js','auth.js','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','icon-maskable.png'].includes(relative)) return;
-  event.respondWith(caches.match(event.request, {ignoreSearch:true}).then(cached => cached || fetch(event.request)));
-});
+const CACHE='svoi-dengi-account-v11';
+const ASSETS=['/','/sb','/finance','/zkh','/index.html','/app.css','/app.js','/portal.js','/finance.js','/finance.css','/model.js','/auth.js','/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/icon-maskable.png'];
+self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('svoi-dengi-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(e.request.method!=='GET'||u.origin!==self.location.origin||!ASSETS.includes(u.pathname))return;e.respondWith(caches.match(e.request,{ignoreSearch:true}).then(c=>c||fetch(e.request)));});
