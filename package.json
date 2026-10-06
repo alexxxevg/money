@@ -3,5 +3,6 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "scripts": { "test": "node --test model.test.js" }
+  "scripts": { "start": "node server.js", "test": "node --test model.test.js security.test.js sync.test.js" },
+  "dependencies": { "postgres": "3.4.9" }
 }

@@ -1,0 +1,32 @@
+services:
+  money:
+    build: .
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      APP_URL: https://money.alexevgproject.ru
+      DATABASE_URL: postgresql://money:${SERVICE_PASSWORD_MONEYDB}@database:5432/money
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+  database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: money
+      POSTGRES_DB: money
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_MONEYDB}
+    volumes:
+      - money-db:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U money -d money"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  money-db:
