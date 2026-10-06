@@ -1,17 +1,10 @@
-name: Publish PWA to GitHub Pages
-
+name: Validate Money PWA
 on:
   push:
     branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
-
-concurrency:
-  group: github-pages
-  cancel-in-progress: true
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -19,26 +12,8 @@ jobs:
       - uses: actions/checkout@v6
       - name: Validate scripts and business logic
         run: |
+          node --check server.js
           node --check dist/app.js
+          node --check dist/auth.js
           node --check dist/sw.js
-          node --test model.test.js
-
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v4
-        with:
-          path: dist
-      - name: Publish application
-        id: deployment
-        uses: actions/deploy-pages@v4
+          node --test model.test.js security.test.js sync.test.js
