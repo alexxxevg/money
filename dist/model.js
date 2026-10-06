@@ -26,15 +26,40 @@ export function yearDate(date, year) {
 export function emptyData() { return {version:VERSION,people:[],events:[],debts:[],defaultAmount:30000}; }
 export function eventTotals(event) {
   const collected = event.payments.reduce((a,p)=>a+p.amount,0);
+  const own = (event.ownContributions||[]).reduce((a,p)=>a+p.amount,0);
   const transferred = event.outflows.reduce((a,p)=>a+p.amount,0);
   const expected = event.participants.filter(p=>p.included).reduce((a,p)=>a+p.expected,0);
   const received = personId => event.payments.filter(p=>p.personId===personId).reduce((a,p)=>a+p.amount,0);
   const complete = event.participants.filter(p=>p.included).every(p=>received(p.personId)>=p.expected);
-  return {collected,transferred,expected,remaining:collected-transferred,received,complete};
+  return {collected,own,transferred,expected,remaining:collected+own-transferred,received,complete};
+}
+export const employmentStatus = person => person.status || (person.active?'working':'inactive');
+export const canCollect = person => !!person && employmentStatus(person)==='working';
+export function preserveLegacyFields(value, previous) {
+  const data=structuredClone(value);
+  for(const p of Array.isArray(data?.people)?data.people:[]){
+    const old=previous.people.find(x=>x.id===p?.id);
+    if(p&&p.status===undefined&&old?.status&&p.active===old.active)p.status=old.status;
+  }
+  for(const e of Array.isArray(data?.events)?data.events:[]){
+    const old=previous.events.find(x=>x.id===e?.id);if(!e||!old)continue;
+    if(e.ownContributions===undefined)e.ownContributions=structuredClone(old.ownContributions||[]);
+    for(const p of Array.isArray(e.payments)?e.payments:[]){
+      const prior=old.payments.find(x=>x.id===p?.id);
+      if(p&&p.month===undefined&&prior?.month&&e.monthly&&prior.personId===p.personId&&prior.amount===p.amount&&prior.date===p.date)p.month=prior.month;
+    }
+  }
+  return data;
+}
+export const visibleParticipants = (event,people) => event.participants.filter(p=>canCollect(people.find(x=>x.id===p.personId)));
+export function addOwnContribution(event,sum,date,note='') {
+  if(event.closed)throw new Error('Сначала возобновите расчёты.');
+  if(!Number.isSafeInteger(sum)||sum<=0||sum>100000000000||!validDate(date))throw new Error('Проверьте сумму и дату.');
+  (event.ownContributions||=[]).push({id:uid(),amount:sum,date,note});
 }
 export const debtRemaining = debt => debt.amount-debt.repayments.reduce((a,p)=>a+p.amount,0);
 export function currentCollectionVisible(event, people) {
-  return !event.closed && !(event.kind==='birthday' && people.some(p=>p.id===event.recipientId&&!p.active));
+  return !event.closed && !(event.kind==='birthday' && people.some(p=>p.id===event.recipientId&&!canCollect(p)));
 }
 export const paymentMonth = payment => payment.month || payment.date.slice(0,7);
 export const validMonth = month => typeof month==='string'&&/^\d{4}-\d{2}$/.test(month)&&validDate(month+'-01');
@@ -43,7 +68,8 @@ export function collectionMonths(event) {
   return [...new Set([...Array.from({length:12},(_,i)=>`${year}-${String(i+1).padStart(2,'0')}`),...event.payments.map(paymentMonth)])].sort();
 }
 export function sortedPeople(people) {
-  return [...people].sort((a,b)=>Number(b.active)-Number(a.active)||(a.birthday||'99-99').localeCompare(b.birthday||'99-99')||a.name.localeCompare(b.name,'ru'));
+  const rank=p=>({working:0,maternity:1,inactive:2})[employmentStatus(p)];
+  return [...people].sort((a,b)=>rank(a)-rank(b)||(a.birthday||'99-99').localeCompare(b.birthday||'99-99')||a.name.localeCompare(b.name,'ru'));
 }
 export function cancelPayment(event, paymentId) {
   const index=event.payments.findIndex(p=>p.id===paymentId);
@@ -67,7 +93,7 @@ export function finishSettledHistory(event) {
 export function newEvent(data, {title,date,kind='birthday',recipientId='',recurring=true,monthly=false,participants}) {
   if (!title.trim()) throw new Error('Введите название.');
   if (!validDate(date)) throw new Error('Укажите корректную дату мероприятия.');
-  return {id:uid(),seriesId:uid(),title:title.trim(),date,kind,recipientId,recurring,monthly,collectionClosed:false,closed:false,participants:participants || data.people.filter(p=>p.active).map(p=>({personId:p.id,name:p.name,included:p.id!==recipientId,expected:data.defaultAmount,reason:p.id===recipientId?'Именинник':''})),payments:[],outflows:[],createdAt:new Date().toISOString()};
+  return {id:uid(),seriesId:uid(),title:title.trim(),date,kind,recipientId,recurring,monthly,collectionClosed:false,closed:false,participants:participants || data.people.filter(canCollect).map(p=>({personId:p.id,name:p.name,included:p.id!==recipientId,expected:data.defaultAmount,reason:p.id===recipientId?'Именинник':''})),payments:[],outflows:[],ownContributions:[],createdAt:new Date().toISOString()};
 }
 export function addPayment(event, personId, sum, date, note='', month='') {
   if(event.closed || event.collectionClosed) throw new Error('Сначала возобновите сбор.');
@@ -101,11 +127,11 @@ export function addRepayment(debt,sum,date,note='') {
 export function annualCandidates(data,sourceYear,targetYear) {
   if (!Number.isInteger(targetYear)||targetYear<1900||targetYear>2200||targetYear<=sourceYear) throw new Error('Выберите следующий год или более поздний.');
   const existing = new Set(data.events.filter(e=>Number(e.date.slice(0,4))===targetYear).map(e=>e.seriesId));
-  return data.events.filter(e=>Number(e.date.slice(0,4))===sourceYear&&e.recurring&&!existing.has(e.seriesId)&&(e.kind!=='birthday'||!e.recipientId||data.people.find(p=>p.id===e.recipientId)?.active)&&!(e.kind==='birthday'&&e.recipientId&&data.events.some(x=>x.kind==='birthday'&&x.recipientId===e.recipientId&&Number(x.date.slice(0,4))===targetYear))).map(e=>({...e,id:uid(),date:yearDate(e.date,targetYear),title:e.kind==='newyear'?e.title.replace(/20\d{2}/g,String(targetYear+1)):e.title,collectionClosed:false,closed:false,payments:[],outflows:[],createdAt:new Date().toISOString(),participants:e.participants.filter(p=>data.people.find(x=>x.id===p.personId)?.active).map(p=>({...p,name:data.people.find(x=>x.id===p.personId).name})).concat(data.people.filter(p=>p.active&&!e.participants.some(x=>x.personId===p.id)).map(p=>({personId:p.id,name:p.name,included:p.id!==e.recipientId,expected:data.defaultAmount,reason:p.id===e.recipientId?'Именинник':''})))})).filter(e=>e.participants.some(p=>p.included));
+  return data.events.filter(e=>Number(e.date.slice(0,4))===sourceYear&&e.recurring&&!existing.has(e.seriesId)&&(e.kind!=='birthday'||!e.recipientId||canCollect(data.people.find(p=>p.id===e.recipientId)))&&!(e.kind==='birthday'&&e.recipientId&&data.events.some(x=>x.kind==='birthday'&&x.recipientId===e.recipientId&&Number(x.date.slice(0,4))===targetYear))).map(e=>({...e,id:uid(),date:yearDate(e.date,targetYear),title:e.kind==='newyear'?e.title.replace(/20\d{2}/g,String(targetYear+1)):e.title,collectionClosed:false,closed:false,payments:[],outflows:[],ownContributions:[],createdAt:new Date().toISOString(),participants:e.participants.filter(p=>canCollect(data.people.find(x=>x.id===p.personId))).map(p=>({...p,name:data.people.find(x=>x.id===p.personId).name})).concat(data.people.filter(p=>canCollect(p)&&!e.participants.some(x=>x.personId===p.id)).map(p=>({personId:p.id,name:p.name,included:p.id!==e.recipientId,expected:data.defaultAmount,reason:p.id===e.recipientId?'Именинник':''})))})).filter(e=>e.participants.some(p=>p.included));
 }
 export function birthdayCandidates(data,year) {
   if(!Number.isInteger(year)||year<1900||year>2200) throw new Error('Проверьте год.');
-  return data.people.filter(p=>p.active&&p.birthday&&!data.events.some(e=>e.kind==='birthday'&&e.recipientId===p.id&&Number(e.date.slice(0,4))===year)).map(p=>newEvent(data,{title:`День рождения · ${p.name.split(' ').slice(0,2).join(' ')}`,date:yearDate(`2000-${p.birthday}`,year),recipientId:p.id}));
+  return data.people.filter(p=>canCollect(p)&&p.birthday&&!data.events.some(e=>e.kind==='birthday'&&e.recipientId===p.id&&Number(e.date.slice(0,4))===year)).map(p=>newEvent(data,{title:`День рождения · ${p.name.split(' ').slice(0,2).join(' ')}`,date:yearDate(`2000-${p.birthday}`,year),recipientId:p.id}));
 }
 export function demoData() {
   const data=emptyData(),year=currentYear();
@@ -124,11 +150,12 @@ export function validateData(value) {
   const unique=items=>{if(!Array.isArray(items)||items.length>20000)fail();const ids=new Set();for(const x of items){if(!x||!text(x.id,100)||!x.id||ids.has(x.id))fail();ids.add(x.id);}return ids;};
   if(!value||value.version!==VERSION||!positive(value.defaultAmount))fail();
   const ids=unique(value.people);unique(value.events);unique(value.debts);
-  for(const p of value.people)if(!text(p.name,200)||!p.name.trim()||typeof p.active!=='boolean'||!text(p.phone||'',100)||!text(p.birthday||'',5)||(p.birthday&&!validDate(`2000-${p.birthday}`)))fail();
+  for(const p of value.people)if(!text(p.name,200)||!p.name.trim()||typeof p.active!=='boolean'||(p.status!==undefined&&!['working','maternity','inactive'].includes(p.status))||!text(p.phone||'',100)||!text(p.birthday||'',5)||(p.birthday&&!validDate(`2000-${p.birthday}`)))fail();
   for(const e of value.events){
     if(!text(e.title,200)||!e.title.trim()||!text(e.seriesId,100)||!e.seriesId||!validDate(e.date)||!['birthday','gift','party','newyear','other'].includes(e.kind)||typeof e.recurring!=='boolean'||typeof e.monthly!=='boolean'||typeof e.closed!=='boolean'||typeof e.collectionClosed!=='boolean'||!text(e.recipientId,100)||!Array.isArray(e.participants)||e.participants.length>20000)fail();
     const ps=new Set();for(const p of e.participants){if(!ids.has(p.personId)||ps.has(p.personId)||!text(p.name,200)||typeof p.included!=='boolean'||!positive(p.expected)||!text(p.reason||'',200))fail();ps.add(p.personId);}
-    unique(e.payments);unique(e.outflows);
+    unique(e.payments);unique(e.outflows);unique(e.ownContributions||[]);
+    for(const p of e.ownContributions||[])if(!positive(p.amount)||!validDate(p.date)||!text(p.note||''))fail();
     for(const p of e.payments)if(!ps.has(p.personId)||!positive(p.amount)||!validDate(p.date)||!text(p.note||'')||(p.month!==undefined&&(!e.monthly||!validMonth(p.month))))fail();
     for(const p of e.outflows)if(!positive(p.amount)||!validDate(p.date)||!['transfer','expense','return'].includes(p.kind)||!text(p.note||''))fail();
     const totals=eventTotals(e);
@@ -136,5 +163,5 @@ export function validateData(value) {
   }
   for(const d of value.debts){if(!text(d.name,200)||!d.name.trim()||!positive(d.amount)||!validDate(d.date)||!text(d.due,10)||(d.due&&(!validDate(d.due)||d.due<d.date))||!text(d.note||''))fail();unique(d.repayments);for(const p of d.repayments)if(!positive(p.amount)||!validDate(p.date)||p.date<d.date||!text(p.note||''))fail();if(debtRemaining(d)<0)fail();}
   // Whitelist imported fields rather than allowing extra data to be persisted.
-  return {version:VERSION,defaultAmount:value.defaultAmount,people:value.people.map(p=>({id:p.id,name:p.name,active:p.active,birthday:p.birthday||'',phone:p.phone||''})),events:value.events.map(e=>({id:e.id,seriesId:e.seriesId,title:e.title,date:e.date,kind:e.kind,recipientId:e.recipientId,recurring:e.recurring,monthly:e.monthly,closed:e.closed,collectionClosed:e.collectionClosed,createdAt:text(e.createdAt,100)?e.createdAt:'',participants:e.participants.map(p=>({personId:p.personId,name:p.name,included:p.included,expected:p.expected,reason:p.reason||''})),payments:e.payments.map(p=>({id:p.id,personId:p.personId,amount:p.amount,date:p.date,note:p.note||'',...(e.monthly?{month:paymentMonth(p)}:{})})),outflows:e.outflows.map(p=>({id:p.id,amount:p.amount,date:p.date,kind:p.kind,note:p.note||''}))})),debts:value.debts.map(d=>({id:d.id,name:d.name,amount:d.amount,date:d.date,due:d.due,note:d.note||'',repayments:d.repayments.map(p=>({id:p.id,amount:p.amount,date:p.date,note:p.note||''}))}))};
+  return {version:VERSION,defaultAmount:value.defaultAmount,people:value.people.map(p=>({id:p.id,name:p.name,status:employmentStatus(p),active:canCollect(p),birthday:p.birthday||'',phone:p.phone||''})),events:value.events.map(e=>({id:e.id,seriesId:e.seriesId,title:e.title,date:e.date,kind:e.kind,recipientId:e.recipientId,recurring:e.recurring,monthly:e.monthly,closed:e.closed,collectionClosed:e.collectionClosed,createdAt:text(e.createdAt,100)?e.createdAt:'',ownContributions:(e.ownContributions||[]).map(p=>({id:p.id,amount:p.amount,date:p.date,note:p.note||''})),participants:e.participants.map(p=>({personId:p.personId,name:p.name,included:e.closed?p.included:(p.included&&canCollect(value.people.find(x=>x.id===p.personId))),expected:p.expected,reason:!e.closed&&!canCollect(value.people.find(x=>x.id===p.personId))?({maternity:'В декрете',inactive:'Больше не работает'})[employmentStatus(value.people.find(x=>x.id===p.personId))]:p.reason||''})),payments:e.payments.map(p=>({id:p.id,personId:p.personId,amount:p.amount,date:p.date,note:p.note||'',...(e.monthly?{month:paymentMonth(p)}:{})})),outflows:e.outflows.map(p=>({id:p.id,amount:p.amount,date:p.date,kind:p.kind,note:p.note||''}))})),debts:value.debts.map(d=>({id:d.id,name:d.name,amount:d.amount,date:d.date,due:d.due,note:d.note||'',repayments:d.repayments.map(p=>({id:p.id,amount:p.amount,date:p.date,note:p.note||''}))}))};
 }
