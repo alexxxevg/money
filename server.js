@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import postgres from 'postgres';
 import { emptyData, validateData } from './dist/model.js';
-import { hashPassword, verifyPassword, tokenHash, newToken, checkCredentials } from './security.js';
+import { hashPassword, verifyPassword, tokenHash, newToken, checkCredentials, checkPasswordChange } from './security.js';
 
 const sql = postgres(process.env.DATABASE_URL, { max: 8, prepare: false, connect_timeout: 10 });
 const origin = new URL(process.env.APP_URL || 'http://localhost:3000').origin;
@@ -50,7 +50,7 @@ const server = http.createServer(async (req,res) => {
         let entry = limits.get(key); if (!entry || entry.until<Date.now()) { entry={count:0,until:Date.now()+900000}; limits.set(key,entry); }
         if (++entry.count>30) fail(429,'Слишком много попыток. Повторите через 15 минут.');
         const input = await body(req), {email,password} = checkCredentials(input);
-        let user;
+        let user, token=newToken();
         if (path.endsWith('register')) {
           const name = String(input.name || '').trim(); if (!name || name.length>100) fail(400,'Введите имя.');
           const passwordHash = await hashPassword(password);
@@ -60,16 +60,36 @@ const server = http.createServer(async (req,res) => {
             return created;
           }); } catch(error) { if(error.code==='23505') fail(409,'Не удалось создать аккаунт с этой почтой. Попробуйте войти.'); throw error; }
         } else {
-          const [found] = await sql`SELECT id,name,email,password_hash FROM money_users WHERE email=${email}`;
+          user=await sql.begin(async tx=>{
+          const [found] = await tx`SELECT id,name,email,password_hash FROM money_users WHERE email=${email} FOR UPDATE`;
           const valid = await verifyPassword(password,found?.password_hash || dummyHash);
           if (!found || !valid) fail(401,'Неверная почта или пароль.');
-          user={id:found.id,name:found.name,email:found.email};
+          await tx`INSERT INTO money_sessions(token_hash,user_id,expires_at) VALUES(${tokenHash(token)},${found.id},now()+interval '30 days')`;
+          return {id:found.id,name:found.name,email:found.email};
+          });
         }
-        const token=newToken(); await sql`INSERT INTO money_sessions(token_hash,user_id,expires_at) VALUES(${tokenHash(token)},${user.id},now()+interval '30 days')`;
+        if(path.endsWith('register')) await sql`INSERT INTO money_sessions(token_hash,user_id,expires_at) VALUES(${tokenHash(token)},${user.id},now()+interval '30 days')`;
         cookie(res,token); return send(res,200,{user});
       }
       const session = await current(req); if (!session) fail(401,'Войдите в аккаунт.');
       if (path==='/api/auth/me' && req.method==='GET') return send(res,200,{user:session.user});
+      if (path==='/api/auth/password' && req.method==='POST') {
+        const key='password:'+session.user.id;
+        let entry=limits.get(key); if(!entry||entry.until<Date.now()){entry={count:0,until:Date.now()+900000};limits.set(key,entry);}
+        if(++entry.count>10)fail(429,'Слишком много попыток. Повторите через 15 минут.');
+        const input=await body(req);
+        const {currentPassword,password}=checkPasswordChange(input);
+        await sql.begin(async tx=>{
+          const [user]=await tx`SELECT password_hash FROM money_users WHERE id=${session.user.id} FOR UPDATE`;
+          const [active]=await tx`SELECT token_hash FROM money_sessions WHERE token_hash=${session.hash} AND expires_at>now()`;
+          if(!active)fail(401,'Войдите в аккаунт.');
+          if(!await verifyPassword(currentPassword,user.password_hash))fail(400,'Текущий пароль неверный.');
+          const encoded=await hashPassword(password);
+          await tx`UPDATE money_users SET password_hash=${encoded} WHERE id=${session.user.id}`;
+          await tx`DELETE FROM money_sessions WHERE user_id=${session.user.id} AND token_hash<>${session.hash}`;
+        });
+        return send(res,200,{ok:true});
+      }
       if (path==='/api/auth/logout' && req.method==='POST') { await sql`DELETE FROM money_sessions WHERE token_hash=${session.hash}`; cookie(res,'',0); return send(res,200,{ok:true}); }
       if (path==='/api/state' && req.method==='GET') {
         const [state] = await sql`SELECT revision,data FROM money_states WHERE user_id=${session.user.id}`;

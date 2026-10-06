@@ -14,3 +14,10 @@ test('credential validation normalizes email and rejects malformed input',()=>{
  assert.deepEqual(checkCredentials({email:' USER@Example.com ',password:'long-password'}),{email:'user@example.com',password:'long-password'});
  for(const input of [{email:'wrong',password:'long-password'},{email:'a@b.ru',password:'short'},{email:'a@b.ru',password:'x'.repeat(129)},{email:'a@b.ru',password:{}}])assert.throws(()=>checkCredentials(input));
 });
+
+ test('password change validates confirmation, length and difference',async()=>{
+ const {checkPasswordChange}=await import('./security.js');
+ const valid={currentPassword:'old-password-123',newPassword:'new-password-456',confirmPassword:'new-password-456'};
+ assert.equal(checkPasswordChange(valid).password,valid.newPassword);
+ for(const patch of [{currentPassword:null},{newPassword:'short',confirmPassword:'short'},{confirmPassword:'different'},{newPassword:valid.currentPassword,confirmPassword:valid.currentPassword},{newPassword:'x'.repeat(129),confirmPassword:'x'.repeat(129)}])assert.throws(()=>checkPasswordChange({...valid,...patch}),{status:400});
+ });
