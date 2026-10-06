@@ -79,3 +79,13 @@ test('cancel selected partial payment reopens closed collection and preserves ot
  addPayment(e,id,10000,e.date);const selected=e.payments.at(-1).id,original=e.payments[0].id,transfers=JSON.stringify(e.outflows),sum=eventTotals(e).collected;e.closed=true;e.collectionClosed=true;
  cancelPayment(e,selected);assert.equal(eventTotals(e).collected,sum-10000);assert.equal(e.payments[0].id,original);assert.equal(JSON.stringify(e.outflows),transfers);assert.equal(e.closed,false);assert.equal(e.collectionClosed,false);assert.throws(()=>cancelPayment(e,selected));validateData(d);
 });
+
+test('monthly contribution period independent of receipt date; backup preserves it and normalizes legacy',async()=>{
+ const {paymentMonth,collectionMonths}=await import('./dist/model.js');const d=demoData(),e=d.events[1],id=e.participants[0].personId;
+ addPayment(e,id,30000,'2026-10-06','September paid late','2026-09');addPayment(e,id,20000,'2026-10-07','September remainder','2026-09');
+ assert.equal(e.payments[0].date,'2026-10-06');assert.equal(paymentMonth(e.payments[0]),'2026-09');assert.equal(e.payments.filter(p=>paymentMonth(p)==='2026-09').reduce((s,p)=>s+p.amount,0),50000);
+ const imported=validateData(JSON.parse(JSON.stringify(d)));assert.equal(imported.events[1].payments[0].month,'2026-09');
+ delete e.payments[0].month;assert.equal(validateData(d).events[1].payments[0].month,'2026-10');assert.equal(collectionMonths({...e,date:'2026-12-31',payments:[]}).length,12);
+ assert.throws(()=>addPayment(e,id,30000,'2026-10-06','','2026-13'));assert.throws(()=>addPayment(d.events[0],d.events[0].participants[0].personId,30000,'2026-10-06','','2026-09'));
+ e.payments[0].month='2026-00';assert.throws(()=>validateData(d));
+});
