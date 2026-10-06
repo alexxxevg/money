@@ -64,3 +64,18 @@ test('historical closure preserves ledger, reconciles plan; candidates exclude f
  finishSettledHistory(event);assert.equal(event.closed,true);assert.equal(eventTotals(event).complete,true);
  assert.equal(JSON.stringify([event.payments,event.outflows]),ledger);validateData(data);
 });
+
+test('inactive birthdays hidden from current list without changing historical records',async()=>{
+ const {currentCollectionVisible}=await import('./dist/model.js');const e={closed:false,kind:'birthday',recipientId:'former'};
+ assert.equal(currentCollectionVisible(e,[{id:'former',active:false}]),false);assert.equal(currentCollectionVisible(e,[{id:'former',active:true}]),true);
+ assert.equal(currentCollectionVisible({...e,kind:'gift'},[{id:'former',active:false}]),true);assert.equal(e.closed,false);
+});
+test('people sorted by employment then calendar birthday, unknown last; source untouched',async()=>{
+ const {sortedPeople}=await import('./dist/model.js');const people=[{name:'Б',birthday:'01-01',active:false},{name:'А',birthday:'12-01',active:true},{name:'В',birthday:'02-01',active:true},{name:'Г',birthday:'',active:true}];
+ assert.deepEqual(sortedPeople(people).map(p=>p.name),['В','А','Г','Б']);assert.equal(people[0].name,'Б');
+});
+test('cancel selected partial payment reopens closed collection and preserves other operations',async()=>{
+ const {cancelPayment}=await import('./dist/model.js');const d=demoData(),e=d.events[0],id=e.payments[0].personId;
+ addPayment(e,id,10000,e.date);const selected=e.payments.at(-1).id,original=e.payments[0].id,transfers=JSON.stringify(e.outflows),sum=eventTotals(e).collected;e.closed=true;e.collectionClosed=true;
+ cancelPayment(e,selected);assert.equal(eventTotals(e).collected,sum-10000);assert.equal(e.payments[0].id,original);assert.equal(JSON.stringify(e.outflows),transfers);assert.equal(e.closed,false);assert.equal(e.collectionClosed,false);assert.throws(()=>cancelPayment(e,selected));validateData(d);
+});
