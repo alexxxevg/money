@@ -1,6 +1,6 @@
 import {validateData} from './model.js';
 export async function api(path, options={}) {
-  const response=await fetch(path,{credentials:'same-origin',cache:'no-store',...options,headers:{'Content-Type':'application/json',...options.headers}});
+  const response=await fetch(path,{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(12000),...options,headers:{'Content-Type':'application/json',...options.headers}});
   const value=await response.json();
   if(!response.ok)throw Object.assign(new Error(value.error||'Ошибка сервера'),{status:response.status});
   return value;
