@@ -70,9 +70,9 @@ test('inactive birthdays hidden from current list without changing historical re
  assert.equal(currentCollectionVisible(e,[{id:'former',active:false}]),false);assert.equal(currentCollectionVisible(e,[{id:'former',active:true}]),true);
  assert.equal(currentCollectionVisible({...e,kind:'gift'},[{id:'former',active:false}]),true);assert.equal(e.closed,false);
 });
-test('people sorted by employment then calendar birthday, unknown last; source untouched',async()=>{
+test('people sorted alphabetically; source untouched',async()=>{
  const {sortedPeople}=await import('./dist/model.js');const people=[{name:'Б',birthday:'01-01',active:false},{name:'А',birthday:'12-01',active:true},{name:'В',birthday:'02-01',active:true},{name:'Г',birthday:'',active:true}];
- assert.deepEqual(sortedPeople(people).map(p=>p.name),['В','А','Г','Б']);assert.equal(people[0].name,'Б');
+ assert.deepEqual(sortedPeople(people).map(p=>p.name),['А','Б','В','Г']);assert.equal(people[0].name,'Б');
 });
 test('cancel selected partial payment reopens closed collection and preserves other operations',async()=>{
  const {cancelPayment}=await import('./dist/model.js');const d=demoData(),e=d.events[0],id=e.payments[0].personId;
@@ -108,4 +108,8 @@ test('legacy clients preserve new fields while explicit changes remain possible'
  const {preserveLegacyFields,addOwnContribution}=await import('./dist/model.js');const prior=validateData(demoData());prior.people[0].status='maternity';prior.people[0].active=false;addOwnContribution(prior.events[0],10000,prior.events[0].date);
  const legacy=structuredClone(prior);delete legacy.people[0].status;delete legacy.events[0].ownContributions;const result=preserveLegacyFields(legacy,prior);assert.equal(result.people[0].status,'maternity');assert.equal(result.events[0].ownContributions[0].amount,10000);
  legacy.events[0].ownContributions=[];assert.equal(preserveLegacyFields(legacy,prior).events[0].ownContributions.length,0);assert.equal(legacy.people[0].status,undefined);
+});
+
+test('participants sort by total received ascending then alphabet, without changing source',async()=>{
+ const {sortedParticipants}=await import('./dist/model.js');const ps=[{personId:'a',name:'А'},{personId:'b',name:'Б'},{personId:'c',name:'В'},{personId:'d',name:'Г'}];const e={payments:[{personId:'a',amount:30000},{personId:'a',amount:20000},{personId:'d',amount:30000}]};assert.deepEqual(sortedParticipants(ps,e).map(p=>p.personId),['b','c','d','a']);assert.equal(ps[0].personId,'a');assert.deepEqual(sortedParticipants(ps).map(p=>p.personId),['a','b','c','d']);
 });
