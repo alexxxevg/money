@@ -33,6 +33,19 @@ export function eventTotals(event) {
   return {collected,transferred,expected,remaining:collected-transferred,received,complete};
 }
 export const debtRemaining = debt => debt.amount-debt.repayments.reduce((a,p)=>a+p.amount,0);
+export function settledHistoryCandidates(data, cutoff=today()) {
+  return data.events.filter(e=>!e.closed&&!e.monthly&&e.date<cutoff&&e.payments.length&&e.payments.every(p=>p.note.startsWith('Excel '))&&eventTotals(e).collected>0&&eventTotals(e).remaining===0);
+}
+export function finishSettledHistory(event) {
+  const totals=eventTotals(event);
+  if(event.monthly||!event.payments.length||totals.collected<=0||totals.remaining!==0)throw new Error('Этот сбор нельзя завершить как исторический.');
+  for(const p of event.participants){
+    const received=totals.received(p.personId);
+    if(received>0){p.included=true;p.expected=received;}
+    else if(p.included){p.included=false;p.reason='Исторический сбор завершён · взнос не требуется';}
+  }
+  closeCollection(event);closeEvent(event);
+}
 export function newEvent(data, {title,date,kind='birthday',recipientId='',recurring=true,monthly=false,participants}) {
   if (!title.trim()) throw new Error('Введите название.');
   if (!validDate(date)) throw new Error('Укажите корректную дату мероприятия.');
