@@ -7,3 +7,8 @@ export function mergeFinanceImport(current,incoming){
  next.credit=current.credit??next.credit;next.reserved=current.reserved??next.reserved;
  return next;
 }
+
+export function newestFinanceRecords(records){
+ const dateKey=x=>x.date||((x.incomeMonth||x.sourceYear)?String(x.incomeMonth||x.sourceYear)+((x.incomeMonth||'').length===7?'-01':'-01-01'):'');
+ return [...records].sort((a,b)=>dateKey(b).localeCompare(dateKey(a))||String(a.name||'').localeCompare(String(b.name||''),'ru'));
+}
