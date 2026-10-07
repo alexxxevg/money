@@ -3,6 +3,6 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const banks=[[/^(Т[-‑– ]Банк|Тинькофф|Tinkoff)(?=\s|$)/i,'t'],[/^(Альфа[-‑– ]Банк)(?=\s|$)/i,'alfa'],[/^(ВТБ)(?=\s|$)/i,'vtb'],[/^(Сбер(?:банк)?)(?=\s|$)/i,'sber'],[/^(OZON(?: Банк)?)(?=\s|$)/i,'ozon'],[/^(Лояльность МИР)(?=\s|$)/i,'mir']];
 export function bankHeader(label,category=''){
  let name=label,detail='',icon='';for(const [pattern,key]of banks){const match=label.match(pattern);if(match){name=match[1];detail=label.slice(match[0].length).replace(/^\s*[·—–-]?\s*/,'');icon=icons[key]||'';break;}}
- const logo=icon?`<img class="bank-logo" src="${icon}" alt="" width="28" height="28">`:`<svg class="bank-logo bank-symbol" aria-hidden="true" viewBox="0 0 28 28"><path d="M3 10 14 4l11 6M4 12h20M6 12v10m8-10v10m8-10v10M3 24h22" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>`;
+ const logo=icon?`<img class="bank-logo" src="${icon}" alt="" width="32" height="32">`:`<svg class="bank-logo bank-symbol" aria-hidden="true" width="32" height="32" viewBox="0 0 28 28"><path d="M3 10 14 4l11 6M4 12h20M6 12v10m8-10v10m8-10v10M3 24h22" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>`;
  return `<span class="bank-heading">${logo}<span class="bank-name">${esc(name)}</span>${detail?`<span class="bank-detail">${esc(detail)}</span>`:''}${category?`<small class="bank-category">${esc(category)}</small>`:''}</span>`;
 }
