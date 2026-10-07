@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {validateFinance,emptyFinance} from './finance-state.js';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import postgres from 'postgres';
@@ -12,6 +13,8 @@ const cookieName = secure ? '__Host-money_session' : 'money_session';
 await sql`CREATE TABLE IF NOT EXISTS money_users (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), email text NOT NULL UNIQUE, name text NOT NULL, password_hash text NOT NULL, created_at timestamptz NOT NULL DEFAULT now())`;
 await sql`CREATE TABLE IF NOT EXISTS money_sessions (token_hash text PRIMARY KEY, user_id uuid NOT NULL REFERENCES money_users(id) ON DELETE CASCADE, expires_at timestamptz NOT NULL)`;
 await sql`CREATE TABLE IF NOT EXISTS money_states (user_id uuid PRIMARY KEY REFERENCES money_users(id) ON DELETE CASCADE, revision integer NOT NULL DEFAULT 0, data jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`;
+await sql`CREATE TABLE IF NOT EXISTS money_finance_states (user_id uuid PRIMARY KEY REFERENCES money_users(id) ON DELETE CASCADE, revision integer NOT NULL DEFAULT 0, data jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`;
+await sql`CREATE TABLE IF NOT EXISTS money_finance_backups (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES money_users(id) ON DELETE CASCADE, import_id text, kind text NOT NULL, data jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now())`;
 const dummyHash = await hashPassword(newToken());
 const limits = new Map();
 setInterval(() => { const now = Date.now(); for (const [k,v] of limits) if (v.until < now) limits.delete(k); sql`DELETE FROM money_sessions WHERE expires_at < now()`.catch(()=>{}); }, 60000).unref();
@@ -91,6 +94,34 @@ const server = http.createServer(async (req,res) => {
         return send(res,200,{ok:true});
       }
       if (path==='/api/auth/logout' && req.method==='POST') { await sql`DELETE FROM money_sessions WHERE token_hash=${session.hash}`; cookie(res,'',0); return send(res,200,{ok:true}); }
+      if(path==='/api/finance'&&req.method==='GET'){
+        await sql`INSERT INTO money_finance_states(user_id,data) VALUES(${session.user.id},${sql.json(emptyFinance())}) ON CONFLICT(user_id) DO NOTHING`;
+        const [state]=await sql`SELECT revision,data FROM money_finance_states WHERE user_id=${session.user.id}`;return send(res,200,state);
+      }
+      if(['/api/finance','/api/finance/import','/api/finance/rollback'].includes(path)&&['PUT','POST'].includes(req.method)){
+        const input=await body(req);if(!Number.isSafeInteger(input.revision)||input.revision<0)fail(400,'Некорректная версия финансовых данных.');
+        const result=await sql.begin(async tx=>{
+          await tx`INSERT INTO money_finance_states(user_id,data) VALUES(${session.user.id},${tx.json(emptyFinance())}) ON CONFLICT(user_id) DO NOTHING`;
+          const [state]=await tx`SELECT revision,data FROM money_finance_states WHERE user_id=${session.user.id} FOR UPDATE`;
+          if(state.revision!==input.revision)fail(409,'Данные изменились на другом устройстве. Обновите страницу перед сохранением.');
+          let data;
+          if(path==='/api/finance/rollback'){
+            if(!input.importId||state.data.importMeta?.id!==input.importId)fail(409,'Этот импорт уже отменён или заменён.');
+            const [backup]=await tx`SELECT data FROM money_finance_backups WHERE user_id=${session.user.id} AND import_id=${input.importId} AND kind='before-import' ORDER BY created_at DESC LIMIT 1`;
+            if(!backup)fail(404,'Резервная копия импорта не найдена.');
+            await tx`INSERT INTO money_finance_backups(user_id,import_id,kind,data) VALUES(${session.user.id},${input.importId},'before-rollback',${tx.json(state.data)})`;
+            data=backup.data;
+          }else{
+            data=validateFinance(input.data);
+            if(path==='/api/finance/import'){
+              const id=data.importMeta?.id;if(typeof id!=='string'||id.length>100)fail(400,'Нет идентификатора импорта.');
+              if(state.data.importMeta?.id===id)fail(409,'Эта история уже импортирована.');
+              await tx`INSERT INTO money_finance_backups(user_id,import_id,kind,data) VALUES(${session.user.id},${id},'before-import',${tx.json(state.data)})`;
+            }
+          }
+          const [updated]=await tx`UPDATE money_finance_states SET data=${tx.json(data)},revision=revision+1,updated_at=now() WHERE user_id=${session.user.id} RETURNING revision,data`;return updated;
+        });return send(res,200,result);
+      }
       if (path==='/api/state' && req.method==='GET') {
         const [state] = await sql`SELECT revision,data FROM money_states WHERE user_id=${session.user.id}`;
         return send(res,200,state);
