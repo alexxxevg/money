@@ -27,3 +27,6 @@
 .monthly-grid thead tr:first-child th.income-group{height:36px;text-align:center}.monthly-grid thead tr:nth-child(2) th{top:36px}.monthly-grid thead tr:nth-child(3) th{top:142px}.monthly-grid{min-width:4200px}
 
 :root{--subnav:#654638;--subnav-soft:#f1eae5}.fin-nav .selected{background:#242424;color:#fff}.finance-subnav .selected,.ledger-section-nav .selected{background:var(--subnav);color:#fff}.finance-subnav button:hover:not(.selected),.ledger-section-nav button:hover:not(.selected){background:var(--subnav-soft)}.finance-subnav .selected:focus-visible,.ledger-section-nav .selected:focus-visible{outline-color:#a88672}
+
+/* Pin the complete header, so wrapped labels never overlap separate sticky rows. */
+.finance-grid thead{position:sticky;top:0;z-index:5;background:#ededed}.finance-grid thead th{position:static!important;top:auto!important;left:auto!important}.finance-grid thead tr:first-child th:first-child{position:sticky!important;left:0!important;top:auto!important;z-index:6;background:#ededed}.finance-grid thead tr:not(:first-child) th:first-child{z-index:auto}.monthly-grid thead tr:first-child th.income-group{height:auto;padding:10px}.monthly-grid thead tr:nth-child(2) th{padding:12px 10px}
