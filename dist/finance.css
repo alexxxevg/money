@@ -30,3 +30,5 @@
 
 /* Pin the complete header, so wrapped labels never overlap separate sticky rows. */
 .finance-grid thead{position:sticky;top:0;z-index:5;background:#ededed}.finance-grid thead th{position:static!important;top:auto!important;left:auto!important}.finance-grid thead tr:first-child th:first-child{position:sticky!important;left:0!important;top:auto!important;z-index:6;background:#ededed}.finance-grid thead tr:not(:first-child) th:first-child{z-index:auto}.monthly-grid thead tr:first-child th.income-group{height:auto;padding:10px}.monthly-grid thead tr:nth-child(2) th{padding:12px 10px}
+
+.monthly-grid tbody th.month-complete,.monthly-grid tbody tr:hover th.month-complete{background:#e8f2de}.monthly-grid tbody th.month-incomplete,.monthly-grid tbody tr:hover th.month-incomplete{background:#f7e5e9}
