@@ -1,3 +1,4 @@
+import {formatDate} from './model.js';
 import {api,AccountSync,loginScreen} from './auth.js';
 import {employmentStatus,canCollect,visibleParticipants,addOwnContribution,paymentMonth,collectionMonths,currentCollectionVisible,sortedPeople,sortedParticipants,cancelPayment,settledHistoryCandidates,finishSettledHistory,VERSION,uid,today,currentYear,amount,validDate,emptyData,eventTotals,debtRemaining,newEvent,addPayment,addOutflow,closeCollection,closeEvent,addRepayment,annualCandidates,birthdayCandidates,demoData,validateData} from './model.js';
 let sync=null,account=null;
@@ -7,8 +8,8 @@ const app=document.getElementById('app'),modal=document.getElementById('modal');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const rub=n=>new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB',maximumFractionDigits:n%100?2:0}).format(n/100);
 const rawRub=n=>String(n/100);
-const dateText=s=>s?new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'long',year:'numeric'}).format(new Date(s+'T12:00:00')):'Без срока';
-const shortDate=s=>new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'short'}).format(new Date(s+'T12:00:00'));
+const dateText=s=>s?formatDate(s):'Без срока';
+const shortDate=s=>formatDate(s);
 const initials=s=>s.split(' ').slice(0,2).map(x=>x[0]).join('');
 const icons={gift:'<path d="M3 8h18v4H3zM5 12v9h14v-9M12 8v13M12 8C8 8 6 6 6 4s3-2 6 4Zm0 0c4 0 6-2 6-4s-3-2-6 4Z"/>',users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-4M16 3a4 4 0 0 1 0 8"/><circle cx="9" cy="7" r="4"/>',wallet:'<path d="M20 8V5H5a3 3 0 0 0 0 6h16v9H5a3 3 0 0 1-3-3V8M21 11v5h-6v-5Z"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="m9 3-1 3-3 1v3l-2 2 2 2v3l3 1 1 3h6l1-3 3-1v-3l2-2-2-2V7l-3-1-1-3Z"/>',plus:'<path d="M12 5v14M5 12h14"/>',back:'<path d="m15 18-6-6 6-6"/>',close:'<path d="m6 6 12 12M6 18 18 6"/>',trash:'<path d="M3 6h18M5 6l1 15h12l1-15M9 6V3h6v3M10 10v7M14 10v7"/>',check:'<path d="m5 12 4 4L19 6"/>',arrow:'<path d="m9 5 7 7-7 7"/>',download:'<path d="M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5"/>'};
 const icon=name=>`<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]||icons.gift}</svg>`;
