@@ -1,3 +1,4 @@
+import {validateZkh,emptyZkh} from './zkh-state.js';
 import http from 'node:http';
 import {validateFinance,emptyFinance} from './finance-state.js';
 import { readFile } from 'node:fs/promises';
@@ -15,6 +16,8 @@ await sql`CREATE TABLE IF NOT EXISTS money_sessions (token_hash text PRIMARY KEY
 await sql`CREATE TABLE IF NOT EXISTS money_states (user_id uuid PRIMARY KEY REFERENCES money_users(id) ON DELETE CASCADE, revision integer NOT NULL DEFAULT 0, data jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`;
 await sql`CREATE TABLE IF NOT EXISTS money_finance_states (user_id uuid PRIMARY KEY REFERENCES money_users(id) ON DELETE CASCADE, revision integer NOT NULL DEFAULT 0, data jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`;
 await sql`CREATE TABLE IF NOT EXISTS money_finance_backups (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES money_users(id) ON DELETE CASCADE, import_id text, kind text NOT NULL, data jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now())`;
+await sql`CREATE TABLE IF NOT EXISTS money_zkh_states (user_id uuid PRIMARY KEY REFERENCES money_users(id) ON DELETE CASCADE, revision integer NOT NULL DEFAULT 0, data jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`;
+await sql`CREATE TABLE IF NOT EXISTS money_zkh_backups (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES money_users(id) ON DELETE CASCADE, import_id text, kind text NOT NULL, data jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now())`;
 const dummyHash = await hashPassword(newToken());
 const limits = new Map();
 setInterval(() => { const now = Date.now(); for (const [k,v] of limits) if (v.until < now) limits.delete(k); sql`DELETE FROM money_sessions WHERE expires_at < now()`.catch(()=>{}); }, 60000).unref();
@@ -35,7 +38,7 @@ async function current(req) {
   const [user] = await sql`SELECT u.id,u.name,u.email FROM money_users u JOIN money_sessions s ON s.user_id=u.id WHERE s.token_hash=${tokenHash(raw)} AND s.expires_at>now()`;
   return user ? { user, hash:tokenHash(raw) } : null;
 }
-const assets = new Map(Object.entries({ '/':'index.html', '/index.html':'index.html', '/sb':'index.html', '/sb/':'index.html', '/finance':'index.html', '/finance/':'index.html', '/zkh':'index.html', '/zkh/':'index.html', '/portal.js':'portal.js', '/finance.js':'finance.js', '/finance-tables.js':'finance-tables.js', '/finance-import.js':'finance-import.js', '/finance-bank-header.js':'finance-bank-header.js', '/finance-ledgers.js':'finance-ledgers.js', '/finance.css':'finance.css', '/app.js':'app.js', '/app.css':'app.css', '/model.js':'model.js', '/auth.js':'auth.js', '/sw.js':'sw.js', '/manifest.webmanifest':'manifest.webmanifest', '/icon.svg':'icon.svg', '/icon-192.png':'icon-192.png', '/icon-512.png':'icon-512.png', '/icon-maskable.png':'icon-maskable.png' }));
+const assets = new Map(Object.entries({ '/':'index.html', '/index.html':'index.html', '/sb':'index.html', '/sb/':'index.html', '/finance':'index.html', '/finance/':'index.html', '/zkh':'index.html', '/zkh/':'index.html', '/portal.js':'portal.js', '/zkh.js':'zkh.js', '/zkh.css':'zkh.css', '/finance.js':'finance.js', '/finance-tables.js':'finance-tables.js', '/finance-import.js':'finance-import.js', '/finance-bank-header.js':'finance-bank-header.js', '/finance-ledgers.js':'finance-ledgers.js', '/finance.css':'finance.css', '/app.js':'app.js', '/app.css':'app.css', '/model.js':'model.js', '/auth.js':'auth.js', '/sw.js':'sw.js', '/manifest.webmanifest':'manifest.webmanifest', '/icon.svg':'icon.svg', '/icon-192.png':'icon-192.png', '/icon-512.png':'icon-512.png', '/icon-maskable.png':'icon-maskable.png' }));
 const mime = { html:'text/html', js:'text/javascript', css:'text/css', webmanifest:'application/manifest+json', svg:'image/svg+xml', png:'image/png' };
 const server = http.createServer(async (req,res) => {
   res.setHeader('X-Content-Type-Options','nosniff');
@@ -120,6 +123,34 @@ const server = http.createServer(async (req,res) => {
             }
           }
           const [updated]=await tx`UPDATE money_finance_states SET data=${tx.json(data)},revision=revision+1,updated_at=now() WHERE user_id=${session.user.id} RETURNING revision,data`;return updated;
+        });return send(res,200,result);
+      }
+      if(path==='/api/zkh'&&req.method==='GET'){
+        await sql`INSERT INTO money_zkh_states(user_id,data) VALUES(${session.user.id},${sql.json(emptyZkh())}) ON CONFLICT(user_id) DO NOTHING`;
+        const [state]=await sql`SELECT revision,data FROM money_zkh_states WHERE user_id=${session.user.id}`;return send(res,200,state);
+      }
+      if(['/api/zkh','/api/zkh/import','/api/zkh/rollback'].includes(path)&&['PUT','POST'].includes(req.method)){
+        const input=await body(req);if(!Number.isSafeInteger(input.revision)||input.revision<0)fail(400,'Некорректная версия финансовых данных.');
+        const result=await sql.begin(async tx=>{
+          await tx`INSERT INTO money_zkh_states(user_id,data) VALUES(${session.user.id},${tx.json(emptyZkh())}) ON CONFLICT(user_id) DO NOTHING`;
+          const [state]=await tx`SELECT revision,data FROM money_zkh_states WHERE user_id=${session.user.id} FOR UPDATE`;
+          if(state.revision!==input.revision)fail(409,'Данные изменились на другом устройстве. Обновите страницу перед сохранением.');
+          let data;
+          if(path==='/api/zkh/rollback'){
+            if(!input.importId||state.data.importMeta?.id!==input.importId)fail(409,'Этот импорт уже отменён или заменён.');
+            const [backup]=await tx`SELECT data FROM money_zkh_backups WHERE user_id=${session.user.id} AND import_id=${input.importId} AND kind='before-import' ORDER BY created_at DESC LIMIT 1`;
+            if(!backup)fail(404,'Резервная копия импорта не найдена.');
+            await tx`INSERT INTO money_zkh_backups(user_id,import_id,kind,data) VALUES(${session.user.id},${input.importId},'before-rollback',${tx.json(state.data)})`;
+            data=backup.data;
+          }else{
+            data=validateZkh(input.data);
+            if(path==='/api/zkh/import'){
+              const id=data.importMeta?.id;if(typeof id!=='string'||id.length>100)fail(400,'Нет идентификатора импорта.');
+              if(state.data.importMeta?.id===id)fail(409,'Эта история уже импортирована.');
+              await tx`INSERT INTO money_zkh_backups(user_id,import_id,kind,data) VALUES(${session.user.id},${id},'before-import',${tx.json(state.data)})`;
+            }
+          }
+          const [updated]=await tx`UPDATE money_zkh_states SET data=${tx.json(data)},revision=revision+1,updated_at=now() WHERE user_id=${session.user.id} RETURNING revision,data`;return updated;
         });return send(res,200,result);
       }
       if (path==='/api/state' && req.method==='GET') {
