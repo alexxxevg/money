@@ -11,6 +11,7 @@ export function validateFinance(input){
    if(row.date&&!/^20\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(row.date))fail('Некорректная дата.');
   }
  }
+ if(copy.incomeSources){if(!Array.isArray(copy.incomeSources)||copy.incomeSources.length>1000)fail('Проверьте источники доходов.');const keys=new Set();for(const x of copy.incomeSources){if(!x||typeof x.key!=='string'||x.key.length>400||keys.has(x.key)||typeof x.name!=='string'||!x.name.trim()||x.name.length>100||!['cashback','deposits','dividends','other'].includes(x.group))fail('Проверьте название и группу источника.');keys.add(x.key);}}
  for(const k of ['credit','reserved'])if(!Number.isSafeInteger(copy[k])||copy[k]<0)fail('Некорректное обязательство.');
  if(JSON.stringify(copy).length>8000000)fail('Слишком много данных.');return copy;
 }

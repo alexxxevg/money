@@ -23,3 +23,5 @@
 .finance-subnav{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 20px;padding-bottom:12px;border-bottom:1px solid var(--line)}.finance-subnav .selected{background:var(--brand);color:#fff}
 
 .finance-grid .bank-logo{width:32px;height:32px;min-width:32px;max-width:32px;min-height:32px;max-height:32px;flex:0 0 32px;object-fit:contain}.finance-grid .bank-symbol{color:var(--ink)}
+
+.monthly-grid thead tr:first-child th.income-group{height:36px;text-align:center}.monthly-grid thead tr:nth-child(2) th{top:36px}.monthly-grid thead tr:nth-child(3) th{top:142px}.monthly-grid{min-width:4200px}
