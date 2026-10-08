@@ -9,6 +9,7 @@ export function validateZkh(input){
    if(typeof x.id!=='string'||x.id.length>100||ids[key].has(x.id))fail('Повторная или некорректная запись.');ids[key].add(x.id);
    if(['objects','services','meters'].includes(key)&&(typeof x.name!=='string'||!x.name.trim()||x.name.length>200))fail('Проверьте название.');
    if(['payments','readings','taxes'].includes(key)&&!/^20\d\d-(0[1-9]|1[0-2])$/.test(x.month))fail('Проверьте месяц.');
+   if(key==='services'){for(const f of ['activeFrom','activeUntil'])if(x[f]&&!/^20\d\d-(0[1-9]|1[0-2])$/.test(x[f]))fail('Проверьте период участия услуги.');if(x.activeFrom&&x.activeUntil&&x.activeUntil<x.activeFrom)fail('Проверьте период участия услуги.');}
    if(x.taxIncomeMonth!==undefined&&!/^20\d\d-(0[1-9]|1[0-2])$/.test(x.taxIncomeMonth))fail('Проверьте месяц налога.');
    if(x.date){if(!/^20\d\d-\d\d-\d\d$/.test(x.date))fail('Проверьте дату.');const d=new Date(x.date+'T12:00:00Z');if(Number.isNaN(+d)||d.toISOString().slice(0,10)!==x.date)fail('Проверьте дату.');}
    for(const field of ['amount','commission','income'])if(field in x&&x[field]!==null&&(!Number.isSafeInteger(x[field])||Math.abs(x[field])>1e14))fail('Проверьте денежную сумму.');
