@@ -12,3 +12,5 @@ export function newestFinanceRecords(records){
  const dateKey=x=>x.date||((x.incomeMonth||x.sourceYear)?String(x.incomeMonth||x.sourceYear)+((x.incomeMonth||'').length===7?'-01':'-01-01'):'');
  return [...records].sort((a,b)=>dateKey(b).localeCompare(dateKey(a))||String(a.name||'').localeCompare(String(b.name||''),'ru'));
 }
+
+export function visibleFinanceNote(note){return String(note||'').replace(/Получено восстановлено как себестоимость \+ прибыль Excel\.?\s*/g,'').replace(/Дата группы заказов из Excel; даты оплат не указаны/g,'').replace(/Дата заказа и оплаты в Excel не указана/g,'').replace(/Прибыль сохранена по формуле Excel; даты оплат отдельно не указаны/g,'').replace(/Импорт из Excel(?: · точная дата не указана)?/g,'').replace(/Дата выплаты в Excel не указана/g,'').replace(/В Excel вид поступления объединён: кэшбэк \/ проценты/g,'').replace(/Получено по Excel · дата оплаты не указана/g,'').trim();}
