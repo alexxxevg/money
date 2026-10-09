@@ -13,7 +13,7 @@ const btn=(action,label,attrs='')=>`<button data-zkh="${action}" ${attrs}>${labe
 const input=(value,attrs='')=>`<input ${attrs} value="${esc(value)}" data-original="${esc(value)}">`;
 const field=(label,name,value,type='text',attrs='')=>`<label class="field">${label}<input name="${name}" type="${type}" value="${esc(value)}" ${attrs}></label>`;
 export async function startZkh(root,user){
- for(const href of ['/finance.css','/zkh.css']){if(!document.querySelector(`link[href="${href}"]`)){const l=document.createElement('link');l.rel='stylesheet';l.href=href;document.head.append(l);}}
+ for(const href of ['/finance.css','/zkh.css']){if(!document.querySelector(`link[href="${href}"]`)){const l=document.createElement('link');l.rel='stylesheet';l.href=href;document.head.insertBefore(l,document.querySelector('link[href="./vysota-theme.css"]'));}}
  let state=await api('/api/zkh'),data=state.data,revision=state.revision,tab='overview',objectId=data.objects.find(x=>!x.archived)?.id||'',mode='payments',year=Number(current().slice(0,4)),month='all',dirty=false,busy=false,error='',notice='',view='table';
  const desktop=matchMedia('(min-width:900px)'),tableMode=()=>desktop.matches&&view==='table',modal=document.getElementById('modal');
  const periods=()=>Array.from({length:12},(_,i)=>`${year}-${String(i+1).padStart(2,'0')}`).filter(p=>month==='all'||p.slice(5)===month);

@@ -1,3 +1,5 @@
+import {installWorkspaceNavigation} from './workspace-navigation.js';
+installWorkspaceNavigation();
 import {installMoneyDisplay} from './money-display.js';
 installMoneyDisplay();
 import {api,loginScreen} from './auth.js';

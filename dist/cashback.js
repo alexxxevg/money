@@ -3,7 +3,7 @@ import {bankLogo} from './finance-bank-header.js';
 import {upgradeCashback,compareBanks} from './cashback-model.js';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export async function startCashback(root,user){
- const style=document.createElement('link');style.rel='stylesheet';style.href='/finance.css';document.head.append(style);
+ const style=document.createElement('link');style.rel='stylesheet';style.href='/finance.css';document.head.insertBefore(style,document.querySelector('link[href="./vysota-theme.css"]'));
  const loaded=await api('/api/cashback');let data=upgradeCashback(loaded.data),revision=loaded.revision;
  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Novosibirsk',year:'numeric',month:'2-digit'}).formatToParts(new Date());
  let period=parts.find(p=>p.type==='year').value+'-'+parts.find(p=>p.type==='month').value,timer,busy=false,pending=false,dirty=false,failed=false,view='categories',search='';

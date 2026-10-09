@@ -21,7 +21,7 @@ export function financeTotals(data,year,month='all',kind='all'){
  return {total:employment+other+profit,salary:employment,other:other+profit,profit,incomes,sales};
 }
 export async function startFinance(root,user){
- const link=document.createElement('link');link.rel='stylesheet';link.href='/finance.css';document.head.append(link);
+ const link=document.createElement('link');link.rel='stylesheet';link.href='/finance.css';document.head.insertBefore(link,document.querySelector('link[href="./vysota-theme.css"]'));
  const key='money-finance-account-v1-'+user.id;let state=await api('/api/finance'),data=state.data,revision=state.revision,lastSynced=structuredClone(data);let workEvents=[],workAvailable=false;try{const work=await api('/api/state');workEvents=work.data.events;workAvailable=true;}catch{}
  if(!data.cards){data.cards=data.sales.filter(x=>x.name.startsWith('Визитки')).map(x=>({id:x.id,name:'Тестовый заказчик',date:x.date,quantity:x.quantity,actualQuantity:x.quantity,unitCost:Math.round(x.cost/x.quantity),unitPrice:Math.round(x.revenue/x.quantity),received:x.received,note:''}));data.sales=data.sales.filter(x=>!x.name.startsWith('Визитки'));}
  for(const x of data.cards)if(!x.payments)x.payments=x.received?[{id:uid(),amount:x.received,date:'',note:'Ранее учтённая сумма · дата оплаты не указана'}]:[];
