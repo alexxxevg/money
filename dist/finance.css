@@ -48,3 +48,5 @@
 .portal .cashback-search{display:block;margin-bottom:28px}.cashback-rows tr[hidden]{display:none}
 
 .card-potential{display:block;color:#805737;font-size:12px;font-weight:600;margin-top:6px;line-height:1.4}
+
+.account-bank-grid{display:grid;gap:16px;grid-column:1/-1;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}.account-bank-title .bank-heading,.account-group-row .bank-heading{flex-direction:row;justify-content:flex-start;min-height:0;gap:12px}.account-bank-table{width:100%;border-collapse:collapse}.account-bank-table th,.account-bank-table td{text-align:left;padding:12px 4px;border-bottom:1px solid #dedede}.account-bank-table td:last-child,.account-bank-table th:last-child{text-align:right;white-space:nowrap}.account-bank-table td small{display:block;font-size:11px}.account-bank-table th{font-size:12px;color:#707070}.account-bank-table button{padding:0 4px}.account-bank-table tfoot{background:#f5f5f5}.account-bank-title{margin-bottom:14px}.account-group-row th{background:#f0f1f2!important;padding:14px!important}.accounts-summary{grid-column:1/-1;max-width:750px}
