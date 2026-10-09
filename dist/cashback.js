@@ -10,7 +10,7 @@ export async function startCashback(root,user){
  const monthNames=Array.from({length:12},(_,i)=>new Date(2026,i,1).toLocaleDateString('ru-RU',{month:'long'}));
  const orderedBanks=()=>data.banks.filter(b=>!b.hidden).sort((a,b)=>data.sortMode==='manual'?0:compareBanks(a,b,entries()));
  const matchesSearch=b=>!search.trim()||(entries()[b.id]||[]).some(r=>r.name.toLocaleLowerCase('ru').includes(search.trim().toLocaleLowerCase('ru')));
- function filterCards(){let count=0;root.querySelectorAll('.cashback-card').forEach(c=>{const b=data.banks.find(b=>b.id===c.dataset.bank);c.hidden=!matchesSearch(b);if(!c.hidden)count++;});const empty=root.querySelector('#cashback-search-empty');if(empty)empty.hidden=!search.trim()||count>0;}
+ function filterCards(){let count=0;root.querySelectorAll('.cashback-card').forEach(c=>{const b=data.banks.find(b=>b.id===c.dataset.bank);c.hidden=!matchesSearch(b);if(!c.hidden)count++;c.querySelectorAll('tbody [data-index]').forEach(row=>{const r=(entries()[b.id]||[])[Number(row.dataset.index)];row.hidden=!!search.trim()&&!r?.name.toLocaleLowerCase('ru').includes(search.trim().toLocaleLowerCase('ru'));});c.querySelector('[data-add-row]').hidden=locked()||!!search.trim();c.querySelectorAll('[data-remove]').forEach(e=>e.hidden=locked()||!!search.trim());});const empty=root.querySelector('#cashback-search-empty');if(empty)empty.hidden=!search.trim()||count>0;}
  const locked=()=>data.lockedMonths.includes(period);
  const favorite=name=>data.favorites.some(n=>n.toLocaleLowerCase('ru')===name.trim().toLocaleLowerCase('ru'));
  const entries=()=>data.months[period]||{};
