@@ -162,6 +162,10 @@ const server = http.createServer(async (req,res) => {
       if(path==='/api/cashback'&&req.method==='PUT'){
         const input=await body(req);if(!Number.isSafeInteger(input.revision)||input.revision<0)fail(400,'Некорректная версия.');
         const data=validateCashback(input.data);
+        const [previous]=await sql`SELECT data FROM money_cashback_states WHERE user_id=${session.user.id} AND revision=${input.revision}`;
+        if(!previous)fail(409,'Данные изменились на другом устройстве. Обновите страницу.');
+        for(const month of previous.data.lockedMonths||[]){if(data.lockedMonths.includes(month)&&JSON.stringify(previous.data.months[month]||{})!==JSON.stringify(data.months[month]||{}))fail(409,'Месяц закрыт для изменений. Разрешите редактирование в настройках.');}
+
         const [saved]=await sql`UPDATE money_cashback_states SET data=${sql.json(data)},revision=revision+1,updated_at=now() WHERE user_id=${session.user.id} AND revision=${input.revision} RETURNING revision,data`;
         if(!saved)fail(409,'Данные изменились на другом устройстве. Скачайте свою копию и обновите страницу.');return send(res,200,saved);
       }
