@@ -39,3 +39,4 @@
 
 .cashback-favorite [data-category]{background:#e8f2de;color:#242424;font-weight:700;font-size:17px}.cashback-rows input:disabled{opacity:1;color:#242424;cursor:default}.cashback-favorites{display:flex;flex-wrap:wrap;gap:12px 24px}.cashback-favorites label{padding:10px;background:#fafafa;border:1px solid #dedede;border-radius:6px}.cashback-locked{color:#476337;background:#e8f2de;padding:10px 14px;border-radius:6px}
 .cashback-favorite [data-percent]{font-weight:700}
+.cashback-favorite [data-percent]{background:#e8f2de;text-align:center}
