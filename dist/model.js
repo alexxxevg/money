@@ -148,7 +148,7 @@ export function demoData() {
   return data;
 }
 export function validateData(value) {
-  const fail=()=>{throw new Error('Файл не является корректной резервной копией «Свои деньги».');};
+  const fail=()=>{throw new Error('Файл не является корректной резервной копией «Баланс».');};
   const text=(s,max=500)=>typeof s==='string'&&s.length<=max;
   const positive=n=>Number.isSafeInteger(n)&&n>0&&n<=100000000000;
   const unique=items=>{if(!Array.isArray(items)||items.length>20000)fail();const ids=new Set();for(const x of items){if(!x||!text(x.id,100)||!x.id||ids.has(x.id))fail();ids.add(x.id);}return ids;};
