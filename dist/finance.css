@@ -42,3 +42,5 @@
 .cashback-favorite [data-percent]{background:#e8f2de;text-align:center}
 
 .cashback-rows [data-percent]{text-align:center}.cashback-order-row{padding:8px 0;border-bottom:1px solid #dedede;gap:12px}.cashback-order-row button{min-width:40px}.cashback-bank-order{max-width:650px}
+
+.cashback-search{max-width:420px;margin:18px 0}.cashback-card[hidden]{display:none}
