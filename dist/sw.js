@@ -1,4 +1,4 @@
-const CACHE='svoi-dengi-account-v60';
+const CACHE='svoi-dengi-account-v61';
 const ASSETS=['/','/sb','/finance','/zkh','/cashback','/cashback.js','/cashback-model.js','/index.html','/app.css','/app.js','/portal.js','/zkh.js','/zkh.css','/finance.js','/finance-tables.js','/finance-import.js','/finance-bank-header.js','/finance-ledgers.js','/finance.css','/model.js','/auth.js','/manifest.webmanifest','/birthday-balloons.png','/icon.svg','/icon-192.png','/icon-512.png','/icon-maskable.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('svoi-dengi-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
