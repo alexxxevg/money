@@ -1,3 +1,4 @@
+import {setupPasskeys,passkeyHandler} from './passkeys.js';
 import {linkFamilyUtilities} from './family-zkh.js';
 import {validateCashback} from './dist/cashback-model.js';
 import {validateZkh,emptyZkh} from './zkh-state.js';
@@ -41,8 +42,10 @@ async function current(req) {
   const [user] = await sql`SELECT u.id,u.name,u.email FROM money_users u JOIN money_sessions s ON s.user_id=u.id WHERE s.token_hash=${tokenHash(raw)} AND s.expires_at>now()`;
   return user ? { user, hash:tokenHash(raw) } : null;
 }
-const assets = new Map(Object.entries({ '/':'index.html', '/index.html':'index.html', '/sb':'index.html', '/sb/':'index.html', '/finance':'index.html', '/finance/':'index.html', '/zkh':'index.html', '/zkh/':'index.html', '/cashback':'index.html', '/cashback/':'index.html', '/cashback.js':'cashback.js', '/cashback-model.js':'cashback-model.js', '/money-display.js':'money-display.js', '/portal.js':'portal.js', '/zkh.js':'zkh.js', '/zkh.css':'zkh.css', '/finance.js':'finance.js', '/finance-tables.js':'finance-tables.js', '/finance-import.js':'finance-import.js', '/finance-bank-header.js':'finance-bank-header.js', '/finance-ledgers.js':'finance-ledgers.js', '/finance.css':'finance.css', '/app.js':'app.js', '/app.css':'app.css', '/model.js':'model.js', '/auth.js':'auth.js', '/sw.js':'sw.js', '/manifest.webmanifest':'manifest.webmanifest', '/birthday-balloons.png':'birthday-balloons.png', '/icon.svg':'icon.svg', '/icon-192.png':'icon-192.png', '/icon-512.png':'icon-512.png', '/icon-maskable.png':'icon-maskable.png' }));
+const assets = new Map(Object.entries({ '/':'index.html', '/index.html':'index.html', '/sb':'index.html', '/sb/':'index.html', '/finance':'index.html', '/finance/':'index.html', '/zkh':'index.html', '/zkh/':'index.html', '/cashback':'index.html', '/cashback/':'index.html', '/cashback.js':'cashback.js', '/cashback-model.js':'cashback-model.js', '/money-display.js':'money-display.js', '/passkeys-client.js':'passkeys-client.js', '/portal.js':'portal.js', '/zkh.js':'zkh.js', '/zkh.css':'zkh.css', '/finance.js':'finance.js', '/finance-tables.js':'finance-tables.js', '/finance-import.js':'finance-import.js', '/finance-bank-header.js':'finance-bank-header.js', '/finance-ledgers.js':'finance-ledgers.js', '/finance.css':'finance.css', '/app.js':'app.js', '/app.css':'app.css', '/model.js':'model.js', '/auth.js':'auth.js', '/sw.js':'sw.js', '/manifest.webmanifest':'manifest.webmanifest', '/birthday-balloons.png':'birthday-balloons.png', '/icon.svg':'icon.svg', '/icon-192.png':'icon-192.png', '/icon-512.png':'icon-512.png', '/icon-maskable.png':'icon-maskable.png' }));
 const mime = { html:'text/html', js:'text/javascript', css:'text/css', webmanifest:'application/manifest+json', svg:'image/svg+xml', png:'image/png' };
+await setupPasskeys(sql);
+const handlePasskey=passkeyHandler({sql,origin,body,send,fail,cookie,newToken,tokenHash,verifyPassword});
 const server = http.createServer(async (req,res) => {
   res.setHeader('X-Content-Type-Options','nosniff');
   res.setHeader('Referrer-Policy','same-origin');
@@ -80,7 +83,9 @@ const server = http.createServer(async (req,res) => {
         if(path.endsWith('register')) await sql`INSERT INTO money_sessions(token_hash,user_id,expires_at) VALUES(${tokenHash(token)},${user.id},now()+interval '30 days')`;
         cookie(res,token); return send(res,200,{user});
       }
+      if(['/api/passkeys/login-options','/api/passkeys/login-verify'].includes(path)){await handlePasskey(req,res,path,null);return;}
       const session = await current(req); if (!session) fail(401,'Войдите в аккаунт.');
+      if(path.startsWith('/api/passkeys/')){await handlePasskey(req,res,path,session);return;}
       if (path==='/api/auth/me' && req.method==='GET') return send(res,200,{user:session.user});
       if (path==='/api/auth/password' && req.method==='POST') {
         const key='password:'+session.user.id;
