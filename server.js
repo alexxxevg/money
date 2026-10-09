@@ -18,6 +18,7 @@ await sql`CREATE TABLE IF NOT EXISTS money_finance_states (user_id uuid PRIMARY 
 await sql`CREATE TABLE IF NOT EXISTS money_finance_backups (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES money_users(id) ON DELETE CASCADE, import_id text, kind text NOT NULL, data jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now())`;
 await sql`CREATE TABLE IF NOT EXISTS money_zkh_states (user_id uuid PRIMARY KEY REFERENCES money_users(id) ON DELETE CASCADE, revision integer NOT NULL DEFAULT 0, data jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`;
 await sql`CREATE TABLE IF NOT EXISTS money_zkh_backups (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES money_users(id) ON DELETE CASCADE, import_id text, kind text NOT NULL, data jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now())`;
+await sql`CREATE TABLE IF NOT EXISTS money_cashback_states (user_id uuid PRIMARY KEY REFERENCES money_users(id) ON DELETE CASCADE, revision integer NOT NULL DEFAULT 0, data jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`;
 const dummyHash = await hashPassword(newToken());
 const limits = new Map();
 setInterval(() => { const now = Date.now(); for (const [k,v] of limits) if (v.until < now) limits.delete(k); sql`DELETE FROM money_sessions WHERE expires_at < now()`.catch(()=>{}); }, 60000).unref();
@@ -38,7 +39,7 @@ async function current(req) {
   const [user] = await sql`SELECT u.id,u.name,u.email FROM money_users u JOIN money_sessions s ON s.user_id=u.id WHERE s.token_hash=${tokenHash(raw)} AND s.expires_at>now()`;
   return user ? { user, hash:tokenHash(raw) } : null;
 }
-const assets = new Map(Object.entries({ '/':'index.html', '/index.html':'index.html', '/sb':'index.html', '/sb/':'index.html', '/finance':'index.html', '/finance/':'index.html', '/zkh':'index.html', '/zkh/':'index.html', '/portal.js':'portal.js', '/zkh.js':'zkh.js', '/zkh.css':'zkh.css', '/finance.js':'finance.js', '/finance-tables.js':'finance-tables.js', '/finance-import.js':'finance-import.js', '/finance-bank-header.js':'finance-bank-header.js', '/finance-ledgers.js':'finance-ledgers.js', '/finance.css':'finance.css', '/app.js':'app.js', '/app.css':'app.css', '/model.js':'model.js', '/auth.js':'auth.js', '/sw.js':'sw.js', '/manifest.webmanifest':'manifest.webmanifest', '/birthday-balloons.png':'birthday-balloons.png', '/icon.svg':'icon.svg', '/icon-192.png':'icon-192.png', '/icon-512.png':'icon-512.png', '/icon-maskable.png':'icon-maskable.png' }));
+const assets = new Map(Object.entries({ '/':'index.html', '/index.html':'index.html', '/sb':'index.html', '/sb/':'index.html', '/finance':'index.html', '/finance/':'index.html', '/zkh':'index.html', '/zkh/':'index.html', '/cashback':'index.html', '/cashback/':'index.html', '/cashback.js':'cashback.js', '/portal.js':'portal.js', '/zkh.js':'zkh.js', '/zkh.css':'zkh.css', '/finance.js':'finance.js', '/finance-tables.js':'finance-tables.js', '/finance-import.js':'finance-import.js', '/finance-bank-header.js':'finance-bank-header.js', '/finance-ledgers.js':'finance-ledgers.js', '/finance.css':'finance.css', '/app.js':'app.js', '/app.css':'app.css', '/model.js':'model.js', '/auth.js':'auth.js', '/sw.js':'sw.js', '/manifest.webmanifest':'manifest.webmanifest', '/birthday-balloons.png':'birthday-balloons.png', '/icon.svg':'icon.svg', '/icon-192.png':'icon-192.png', '/icon-512.png':'icon-512.png', '/icon-maskable.png':'icon-maskable.png' }));
 const mime = { html:'text/html', js:'text/javascript', css:'text/css', webmanifest:'application/manifest+json', svg:'image/svg+xml', png:'image/png' };
 const server = http.createServer(async (req,res) => {
   res.setHeader('X-Content-Type-Options','nosniff');
@@ -152,6 +153,23 @@ const server = http.createServer(async (req,res) => {
           }
           const [updated]=await tx`UPDATE money_zkh_states SET data=${tx.json(data)},revision=revision+1,updated_at=now() WHERE user_id=${session.user.id} RETURNING revision,data`;return updated;
         });return send(res,200,result);
+      }
+      if(path==='/api/cashback'&&req.method==='GET'){
+        await sql`INSERT INTO money_cashback_states(user_id,data) VALUES(${session.user.id},${sql.json({months:{}})}) ON CONFLICT(user_id) DO NOTHING`;
+        const [state]=await sql`SELECT revision,data FROM money_cashback_states WHERE user_id=${session.user.id}`;return send(res,200,state);
+      }
+      if(path==='/api/cashback'&&req.method==='PUT'){
+        const input=await body(req),months=input.data?.months,banks=['СБЕР','Т-БАНК','Альфа-Банк','OZON Банк','ГазпромБанк','ВТБ','Яндекс'];
+        if(!Number.isSafeInteger(input.revision)||input.revision<0||!months||Array.isArray(months)||typeof months!=='object'||Object.keys(months).length>1200)fail(400,'Некорректные данные.');
+        const data={months:{}};
+        for(const [month,entries] of Object.entries(months)){
+          if(!/^20\d\d-(0[1-9]|1[0-2])$/.test(month)||!entries||typeof entries!=='object'||Array.isArray(entries))fail(400,'Проверьте месяц.');
+          data.months[month]={};for(const [bank,text] of Object.entries(entries)){
+            if(!banks.includes(bank)||typeof text!=='string'||text.length>2000)fail(400,'Проверьте банк и категории.');data.months[month][bank]=text;
+          }
+        }
+        const [saved]=await sql`UPDATE money_cashback_states SET data=${sql.json(data)},revision=revision+1,updated_at=now() WHERE user_id=${session.user.id} AND revision=${input.revision} RETURNING revision,data`;
+        if(!saved)fail(409,'Данные изменились на другом устройстве. Скачайте свою копию и обновите страницу.');return send(res,200,saved);
       }
       if (path==='/api/state' && req.method==='GET') {
         const [state] = await sql`SELECT revision,data FROM money_states WHERE user_id=${session.user.id}`;
