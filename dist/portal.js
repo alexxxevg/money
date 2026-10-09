@@ -1,3 +1,5 @@
+import {installMoneyDisplay} from './money-display.js';
+installMoneyDisplay();
 import {api,loginScreen} from './auth.js';
 const root=document.getElementById('app');
 async function show(user){
