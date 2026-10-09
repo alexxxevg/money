@@ -1,3 +1,4 @@
+import {linkFamilyUtilities} from './family-zkh.js';
 import {validateCashback} from './dist/cashback-model.js';
 import {validateZkh,emptyZkh} from './zkh-state.js';
 import http from 'node:http';
@@ -101,7 +102,7 @@ const server = http.createServer(async (req,res) => {
       if (path==='/api/auth/logout' && req.method==='POST') { await sql`DELETE FROM money_sessions WHERE token_hash=${session.hash}`; cookie(res,'',0); return send(res,200,{ok:true}); }
       if(path==='/api/finance'&&req.method==='GET'){
         await sql`INSERT INTO money_finance_states(user_id,data) VALUES(${session.user.id},${sql.json(emptyFinance())}) ON CONFLICT(user_id) DO NOTHING`;
-        const [state]=await sql`SELECT revision,data FROM money_finance_states WHERE user_id=${session.user.id}`;return send(res,200,state);
+        const [state]=await sql`SELECT revision,data FROM money_finance_states WHERE user_id=${session.user.id}`;const [zkh]=await sql`SELECT data FROM money_zkh_states WHERE user_id=${session.user.id}`;state.data=linkFamilyUtilities(state.data,zkh?.data);return send(res,200,state);
       }
       if(['/api/finance','/api/finance/import','/api/finance/rollback'].includes(path)&&['PUT','POST'].includes(req.method)){
         const input=await body(req);if(!Number.isSafeInteger(input.revision)||input.revision<0)fail(400,'Некорректная версия финансовых данных.');
@@ -124,6 +125,7 @@ const server = http.createServer(async (req,res) => {
               await tx`INSERT INTO money_finance_backups(user_id,import_id,kind,data) VALUES(${session.user.id},${id},'before-import',${tx.json(state.data)})`;
             }
           }
+          const [zkh]=await tx`SELECT data FROM money_zkh_states WHERE user_id=${session.user.id}`;data=linkFamilyUtilities(data,zkh?.data);
           const [updated]=await tx`UPDATE money_finance_states SET data=${tx.json(data)},revision=revision+1,updated_at=now() WHERE user_id=${session.user.id} RETURNING revision,data`;return updated;
         });return send(res,200,result);
       }
