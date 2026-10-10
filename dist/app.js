@@ -75,7 +75,7 @@ function personForm(id){
 function eventForm(edit=false){
  const e=edit?activeEvent():null;
  if(!data.people.some(canCollect)&&!e){personForm();notify('Сначала добавьте хотя бы одного коллегу');return;}
- if(e?.closed){notify('Сначала возобновите расчёты');return;}
+ if(e?.closed){openForm('Оформление завершённого сбора',field('Название','title',e.title,'text','required maxlength="200"')+`<label class="field">Тип мероприятия<select name="kind">${[['birthday','День рождения'],['leaving','Уход с работы'],['newyear','Новый год'],['baby','Рождение ребёнка'],['help','Помощь'],['gift','Подарок'],['party','Мероприятие'],['other','Другое']].map(([k,l])=>`<option value="${k}" ${k===e.kind?'selected':''}>${l}</option>`).join('')}</select></label>`,'Сохранить',f=>{const title=f.get('title').trim();if(!title)throw Error('Укажите название.');commit(copy=>{const event=copy.events.find(x=>x.id===e.id);event.title=title;event.kind=f.get('kind');});});return;}
  const participants=e?e.participants.map(p=>({...p})):data.people.filter(canCollect).map(p=>({personId:p.id,name:p.name,included:true,expected:data.defaultAmount,reason:''}));
  if(e)data.people.filter(p=>canCollect(p)&&!participants.some(x=>x.personId===p.id)).forEach(p=>participants.push({personId:p.id,name:p.name,included:true,expected:data.defaultAmount,reason:''}));
  participants.splice(0,participants.length,...sortedParticipants(participants,e));
