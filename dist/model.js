@@ -157,7 +157,7 @@ export function validateData(value) {
   const ids=unique(value.people);unique(value.events);unique(value.debts);
   for(const p of value.people)if(!text(p.name,200)||!p.name.trim()||typeof p.active!=='boolean'||(p.status!==undefined&&!['working','maternity','inactive'].includes(p.status))||!text(p.phone||'',100)||!text(p.birthday||'',5)||(p.birthday&&!validDate(`2000-${p.birthday}`)))fail();
   for(const e of value.events){
-    if(!text(e.title,200)||!e.title.trim()||!text(e.seriesId,100)||!e.seriesId||!validDate(e.date)||!['birthday','gift','party','newyear','other'].includes(e.kind)||typeof e.recurring!=='boolean'||typeof e.monthly!=='boolean'||typeof e.closed!=='boolean'||typeof e.collectionClosed!=='boolean'||!text(e.recipientId,100)||!Array.isArray(e.participants)||e.participants.length>20000)fail();
+    if(!text(e.title,200)||!e.title.trim()||!text(e.seriesId,100)||!e.seriesId||!validDate(e.date)||!['birthday','gift','party','newyear','other','leaving','baby','help'].includes(e.kind)||typeof e.recurring!=='boolean'||typeof e.monthly!=='boolean'||typeof e.closed!=='boolean'||typeof e.collectionClosed!=='boolean'||!text(e.recipientId,100)||!Array.isArray(e.participants)||e.participants.length>20000)fail();
     const ps=new Set();for(const p of e.participants){if(!ids.has(p.personId)||ps.has(p.personId)||!text(p.name,200)||typeof p.included!=='boolean'||!positive(p.expected)||!text(p.reason||'',200))fail();ps.add(p.personId);}
     unique(e.payments);unique(e.outflows);unique(e.ownContributions||[]);
     for(const p of e.ownContributions||[])if(!positive(p.amount)||!validDate(p.date)||!text(p.note||''))fail();
