@@ -1,15 +1,16 @@
-export const emptyZkh=()=>({objects:[],services:[],meters:[],payments:[],readings:[],taxes:[],warnings:[]});
+export const emptyZkh=()=>({objects:[],services:[],meters:[],payments:[],readings:[],taxes:[],propertyTaxes:[],warnings:[]});
 export function validateZkh(input){
  const fail=m=>{throw Object.assign(new Error(m),{status:400});};
  if(!input||typeof input!=='object'||Array.isArray(input))fail('Некорректные данные ЖКХ.');
- const data=JSON.parse(JSON.stringify(input));
- const ids={};for(const key of ['objects','services','meters','payments','readings','taxes','warnings']){
+ const data=JSON.parse(JSON.stringify(input));data.propertyTaxes??=[];
+ const ids={};for(const key of ['objects','services','meters','payments','readings','taxes','propertyTaxes','warnings']){
   if(!Array.isArray(data[key])||data[key].length>20000)fail('Проверьте раздел '+key);ids[key]=new Set();
   for(const x of data[key]){if(!x||typeof x!=='object')fail('Некорректная запись.');if(key==='warnings')continue;
    if(typeof x.id!=='string'||x.id.length>100||ids[key].has(x.id))fail('Повторная или некорректная запись.');ids[key].add(x.id);
    if(['objects','services','meters'].includes(key)&&(typeof x.name!=='string'||!x.name.trim()||x.name.length>200))fail('Проверьте название.');
    if(['payments','readings','taxes'].includes(key)&&!/^20\d\d-(0[1-9]|1[0-2])$/.test(x.month))fail('Проверьте месяц.');
    if(key==='services'){for(const f of ['activeFrom','activeUntil'])if(x[f]&&!/^20\d\d-(0[1-9]|1[0-2])$/.test(x[f]))fail('Проверьте период участия услуги.');if(x.activeFrom&&x.activeUntil&&x.activeUntil<x.activeFrom)fail('Проверьте период участия услуги.');}
+   if(key==='propertyTaxes'&&(!['self','mom'].includes(x.payer)||!Number.isInteger(x.taxYear)||x.taxYear<2000||x.taxYear>2099||!['property','land','transport','combined'].includes(x.kind)||typeof x.object!=='string'||x.object.length>200||!x.date||!Number.isSafeInteger(x.amount)||x.amount<0))fail('Проверьте имущественный налог.');
    if(x.taxIncomeMonth!==undefined&&!/^20\d\d-(0[1-9]|1[0-2])$/.test(x.taxIncomeMonth))fail('Проверьте месяц налога.');
    if(x.date){if(!/^20\d\d-\d\d-\d\d$/.test(x.date))fail('Проверьте дату.');const d=new Date(x.date+'T12:00:00Z');if(Number.isNaN(+d)||d.toISOString().slice(0,10)!==x.date)fail('Проверьте дату.');}
    for(const field of ['amount','commission','income'])if(field in x&&x[field]!==null&&(!Number.isSafeInteger(x[field])||Math.abs(x[field])>1e14))fail('Проверьте денежную сумму.');
