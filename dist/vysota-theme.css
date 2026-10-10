@@ -14,3 +14,5 @@
 .event-card:before{left:68%;right:auto;top:50%;bottom:auto;width:58px;height:97px;transform:translate(-50%,-50%);opacity:.34}
 
 .event-theme-corporate:before{background-image:url('/event-corporate.png');background-size:contain;background-position:center;background-repeat:no-repeat;opacity:.34}
+
+.insurance-file{display:block;color:#916532;margin:6px 0;text-decoration:underline}.insurance-grid{min-width:1150px}

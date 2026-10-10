@@ -1,3 +1,4 @@
+import {setupPolicyFiles,policyFileHandler} from './policy-files.js';
 import {linkFamilyUtilities} from './family-zkh.js';
 import {validateCashback} from './dist/cashback-model.js';
 import {validateZkh,emptyZkh} from './zkh-state.js';
@@ -43,6 +44,8 @@ async function current(req) {
 }
 const assets = new Map(Object.entries({ '/':'index.html', '/index.html':'index.html', '/sb':'index.html', '/sb/':'index.html', '/finance':'index.html', '/finance/':'index.html', '/zkh':'index.html', '/zkh/':'index.html', '/cashback':'index.html', '/cashback/':'index.html', '/cashback.js':'cashback.js', '/cashback-model.js':'cashback-model.js', '/money-display.js':'money-display.js', '/workspace-navigation.js':'workspace-navigation.js', '/vysota-theme.css':'vysota-theme.css', '/portal.js':'portal.js', '/zkh.js':'zkh.js', '/zkh.css':'zkh.css', '/finance.js':'finance.js', '/finance-tables.js':'finance-tables.js', '/finance-import.js':'finance-import.js', '/finance-bank-header.js':'finance-bank-header.js', '/finance-ledgers.js':'finance-ledgers.js', '/finance.css':'finance.css', '/app.js':'app.js', '/app.css':'app.css', '/model.js':'model.js', '/auth.js':'auth.js', '/sw.js':'sw.js', '/manifest.webmanifest':'manifest.webmanifest', '/event-corporate.png':'event-corporate.png', '/event-themes.png':'event-themes.png', '/icon.svg':'icon.svg', '/icon-192.png':'icon-192.png', '/icon-512.png':'icon-512.png', '/icon-maskable.png':'icon-maskable.png' }));
 const mime = { html:'text/html', js:'text/javascript', css:'text/css', webmanifest:'application/manifest+json', svg:'image/svg+xml', png:'image/png' };
+await setupPolicyFiles(sql);
+const handlePolicyFile=policyFileHandler({sql,send,fail});
 const server = http.createServer(async (req,res) => {
   res.setHeader('X-Content-Type-Options','nosniff');
   res.setHeader('Referrer-Policy','same-origin');
@@ -81,6 +84,7 @@ const server = http.createServer(async (req,res) => {
         cookie(res,token); return send(res,200,{user});
       }
       const session = await current(req); if (!session) fail(401,'Войдите в аккаунт.');
+      if(await handlePolicyFile(req,res,path,session.user))return;
       if (path==='/api/auth/me' && req.method==='GET') return send(res,200,{user:session.user});
       if (path==='/api/auth/password' && req.method==='POST') {
         const key='password:'+session.user.id;
@@ -154,6 +158,7 @@ const server = http.createServer(async (req,res) => {
               await tx`INSERT INTO money_zkh_backups(user_id,import_id,kind,data) VALUES(${session.user.id},${id},'before-import',${tx.json(state.data)})`;
             }
           }
+          const fileIds=[...new Set((data.insurance||[]).flatMap(x=>x.files.map(f=>f.id)))];if(fileIds.length){const [owned]=await tx`SELECT COUNT(*) AS count FROM money_policy_files WHERE user_id=${session.user.id} AND id::text=ANY(${fileIds}::text[])`;if(Number(owned.count)!==fileIds.length)fail(400,'Полис не найден в вашем аккаунте.');}
           const [updated]=await tx`UPDATE money_zkh_states SET data=${tx.json(data)},revision=revision+1,updated_at=now() WHERE user_id=${session.user.id} RETURNING revision,data`;return updated;
         });return send(res,200,result);
       }
