@@ -11,3 +11,6 @@
 .zkh-payment-grid{table-layout:fixed}.zkh-payment-grid td{min-width:0}.zkh-payment-grid th,.zkh-payment-grid td{padding:8px 6px}.zkh-payment-grid th:first-child,.zkh-payment-grid td:first-child{min-width:0}.zkh-payment-grid input{min-width:0;padding:8px 4px}.zkh-payment-grid thead th{overflow-wrap:anywhere}
 
 .mobile-payment-review{border:1px solid #cba76d;background:#fbf1de;padding:16px;margin:16px 0;border-radius:6px}.mobile-payment-review>div{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-top:10px}
+
+/* Keep apartment card totals, details and actions visually separate. */
+.zkh-object-grid>.panel{display:flex;flex-direction:column;align-items:flex-start;padding:22px 20px;gap:0}.zkh-object-grid>.panel>h3{margin:10px 0 0}.zkh-object-grid>.panel>.fin-metric{margin:20px 0 10px;line-height:1.2}.zkh-object-grid>.panel>p.muted{margin:0 0 20px;line-height:1.5}.zkh-object-grid>.panel>button{margin-top:auto}
