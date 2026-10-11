@@ -1,3 +1,4 @@
+import {pagePreferences} from './workspace-navigation.js';
 import {formatDate} from './model.js';
 import {bankHeader} from './finance-bank-header.js';
 import {amount,today,uid,validDate} from './model.js';
@@ -5,8 +6,8 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const rub=n=>(n/100).toLocaleString('ru-RU',{maximumFractionDigits:2})+' ₽';
 const signedMoney=s=>{const v=String(s).replace(/[\s\u00a0₽]/g,'').replace(',','.');return v.startsWith('-')?-money(v.slice(1)):money(v);};
 const money=s=>{const v=String(s).replace(/[\s\u00a0₽]/g,'').replace(',','.');return !v||Number(v)===0?0:amount(v);};
-export function createFinanceTables({root,getData,save,getYear,getMonth,getKind,salaryFields,salaryValues,categories,getTotals,render}){
- let dirty=false,busy=false,journal=false;const isSalary=c=>salaryFields.some(x=>x[1]===c);
+export function createFinanceTables({userId,root,getData,save,getYear,getMonth,getKind,salaryFields,salaryValues,categories,getTotals,render}){
+ let dirty=false,busy=false,journal=false;const preferences=pagePreferences(userId,'finance-income-view');({journal}=preferences.read({journal}));window.addEventListener('beforeunload',()=>preferences.write({journal}));const isSalary=c=>salaryFields.some(x=>x[1]===c);
  const input=(value,attrs)=>`<input ${attrs} value="${esc(value)}" data-original="${esc(value)}">`;
  function toolbar(type){return `<div class="grid-toolbar"><span class="grid-status" role="status">Все изменения сохранены</span><div><button data-grid="cancel">Отменить изменения</button><button hidden data-grid="save" data-type="${type}" class="primary">Сохранить изменения</button></div></div><p class="error grid-error" role="alert"></p>`;}
  function salaryView(){const year=getYear(),month=getMonth(),periods=Array.from({length:12},(_,i)=>`${year}-${String(i+1).padStart(2,'0')}`).filter(p=>month==='all'||p.slice(5)===month);return `<h3>Зарплата · таблица за ${year} год</h3>${toolbar('salary')}<div class="finance-grid-wrap"><table class="finance-grid salary-grid"><thead><tr><th>Месяц</th>${salaryFields.map(([label])=>`<th>${label}, ₽</th>`).join('')}<th>Итого</th><th>ТПР</th></tr></thead><tbody>${periods.map(p=>{const values=salaryValues(p),total=values.reduce((a,b)=>a+b,0),prior=salaryValues(`${year-1}-${p.slice(5)}`).reduce((a,b)=>a+b,0);return `<tr data-period="${p}" data-prior="${prior}"><th>${new Date(p+'-01T12:00:00').toLocaleDateString('ru-RU',{month:'long'})}</th>${values.map((v,i)=>`<td>${input(v?v/100:'',`data-cell="${i}" aria-label="${p} ${salaryFields[i][0]}" inputmode="decimal"`)}</td>`).join('')}<td data-total>${rub(total)}</td><td class="${prior?total>prior?'tpr-positive':total<prior?'tpr-negative':'':''}" data-growth>${prior?((total-prior)/prior*100).toFixed(1)+'%':'—'}</td></tr>`;}).join('')}</tbody><tfoot><tr><th>Итого</th>${salaryFields.map((_,i)=>`<td data-column="${i}">${rub(periods.reduce((n,p)=>n+salaryValues(p)[i],0))}</td>`).join('')}<td data-grand>${rub(periods.reduce((n,p)=>n+salaryValues(p).reduce((a,b)=>a+b,0),0))}</td><td></td></tr></tfoot></table></div>`;}

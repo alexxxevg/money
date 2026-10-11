@@ -17,3 +17,8 @@ function installEditButtons(){
  };
  new MutationObserver(refresh).observe(document.body,{childList:true,subtree:true});refresh();
 }
+
+export function pagePreferences(user,section){
+ const key='vysota-page-v1-'+user+'-'+section;
+ return {read(defaults){try{const saved=JSON.parse(localStorage.getItem(key)||'{}'),result={...defaults};for(const k of Object.keys(defaults))if(typeof saved[k]===typeof defaults[k]&&(typeof saved[k]!=='number'||Number.isFinite(saved[k]))&&String(saved[k]).length<500)result[k]=saved[k];return result;}catch{return defaults;}},write(value){try{localStorage.setItem(key,JSON.stringify(value));}catch{}}};
+}
