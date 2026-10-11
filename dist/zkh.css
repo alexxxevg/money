@@ -16,3 +16,5 @@
 .zkh-object-grid>.panel{display:flex;flex-direction:column;align-items:flex-start;padding:22px 20px;gap:0}.zkh-object-grid>.panel>h3{margin:10px 0 0}.zkh-object-grid>.panel>.fin-metric{margin:20px 0 10px;line-height:1.2}.zkh-object-grid>.panel>p.muted{margin:0 0 20px;line-height:1.5}.zkh-object-grid>.panel>button{margin-top:auto}
 
 .zkh-main button[data-zkh="all-services"]{display:block;margin-top:16px;margin-bottom:24px}.zkh-main button[data-zkh="all-services"]+.zkh-service-grid{margin-top:0}
+
+.zkh-payment-grid tbody tr.payment-future td,.zkh-payment-grid tbody tr.payment-future:hover td{background:repeating-linear-gradient(135deg,#faf9f6 0,#faf9f6 8px,#eae6df 8px,#eae6df 10px)}.zkh-payment-grid .payment-future td:focus-within{background:#fff!important}.zkh-payment-grid .payment-future th{color:#89847c}
