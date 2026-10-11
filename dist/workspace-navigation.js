@@ -26,6 +26,15 @@ export function pagePreferences(user,section){
 
 function installDeleteButtons(){
  const trash='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></svg>';
- const refresh=()=>{for(const button of document.querySelectorAll('button:not([data-trash-ready])')){const text=button.textContent.trim(),label=button.getAttribute('aria-label')||text;if(!/^Удалить(?:\s|$)/.test(label)&&!button.matches('[data-remove],[data-delete-category]'))continue;button.dataset.trashReady='true';button.setAttribute('aria-label',label||'Удалить');button.title=label||'Удалить';button.classList.remove('primary','secondary','full','textlink');button.classList.add('delete-trash');button.innerHTML=trash;}};
+ const refresh=()=>{for(const button of document.querySelectorAll('button:not([data-trash-ready]):not(.delete-confirm-submit)')){const text=button.textContent.trim(),label=button.getAttribute('aria-label')||text;if(!/^Удалить(?:\s|$)/.test(label)&&!button.matches('[data-remove],[data-delete-category]'))continue;button.dataset.trashReady='true';button.setAttribute('aria-label',label||'Удалить');button.title=label||'Удалить';button.classList.remove('primary','secondary','full','textlink');button.classList.add('delete-trash');button.innerHTML=trash;}};
  new MutationObserver(refresh).observe(document.body,{childList:true,subtree:true});refresh();
+}
+
+export function confirmDeletion(message){
+ return new Promise(resolve=>{
+  const dialog=document.createElement('dialog');dialog.className='delete-confirm-dialog';
+  dialog.innerHTML='<form method="dialog"><h2>Подтвердить удаление</h2><p></p><div class="delete-confirm-actions"><button value="cancel" class="secondary" autofocus>Отмена</button><button value="delete" class="delete-confirm-submit">Удалить</button></div></form>';
+  dialog.querySelector('p').textContent=message;document.body.append(dialog);
+  dialog.addEventListener('close',()=>{const approved=dialog.returnValue==='delete';dialog.remove();resolve(approved);},{once:true});dialog.showModal();
+ });
 }
