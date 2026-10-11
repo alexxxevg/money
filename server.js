@@ -1,7 +1,7 @@
 import {setupPolicyFiles,policyFileHandler} from './policy-files.js';
 import {linkFamilyUtilities} from './family-zkh.js';
 import {validateCashback} from './dist/cashback-model.js';
-import {validateZkh,emptyZkh,splitMobileServices} from './zkh-state.js';
+import {validateZkh,emptyZkh,splitMobileServices,mergeApartmentServices} from './zkh-state.js';
 import http from 'node:http';
 import {validateFinance,emptyFinance} from './finance-state.js';
 import { readFile } from 'node:fs/promises';
@@ -26,9 +26,9 @@ await sql`CREATE TABLE IF NOT EXISTS money_cashback_states (user_id uuid PRIMARY
 for(const entry of await sql`SELECT user_id FROM money_zkh_states`){
  await sql.begin(async tx=>{
   const [state]=await tx`SELECT data FROM money_zkh_states WHERE user_id=${entry.user_id} FOR UPDATE`;
-  const data=validateZkh(splitMobileServices(state.data));
+  const data=validateZkh(mergeApartmentServices(splitMobileServices(state.data)));
   if(JSON.stringify(data)!==JSON.stringify(validateZkh(state.data))){
-   await tx`INSERT INTO money_zkh_backups(user_id,import_id,kind,data) VALUES(${entry.user_id},'mobile-operators-split-v2','before-mobile-split',${tx.json(state.data)})`;
+   await tx`INSERT INTO money_zkh_backups(user_id,import_id,kind,data) VALUES(${entry.user_id},'apartment-services-merge-v1','before-services-cleanup',${tx.json(state.data)})`;
    await tx`UPDATE money_zkh_states SET data=${tx.json(data)},revision=revision+1,updated_at=now() WHERE user_id=${entry.user_id}`;
   }
  });

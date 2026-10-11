@@ -39,3 +39,19 @@ export function splitMobileServices(input){
  }
  return data;
 }
+
+export function mergeApartmentServices(input){
+ const data=structuredClone(input),groups=new Map();
+ const normalize=name=>name.trim().replace(/\s+/g,' ').replace(/^(Электроэнергия|Отопление) ЕИРЦ ТО$/i,'$1').toLocaleLowerCase('ru');
+ for(const service of data.services){
+  if(service.objectId==='services')continue;
+  const key=service.objectId+'|'+normalize(service.name),existing=groups.get(key);
+  if(!existing){groups.set(key,service);continue;}
+  for(const payment of data.payments)if(payment.serviceId===service.id)payment.serviceId=existing.id;
+  if(existing.required===false&&service.required!==false)existing.required=true;
+  if(existing.activeFrom&&(!service.activeFrom||service.activeFrom<existing.activeFrom))existing.activeFrom=service.activeFrom||'';
+  if(existing.activeUntil&&(!service.activeUntil||service.activeUntil>existing.activeUntil))existing.activeUntil=service.activeUntil||'';
+ }
+ const keep=new Set([...groups.values()].map(s=>s.id));
+ data.services=data.services.filter(s=>s.objectId==='services'||keep.has(s.id));return data;
+}
