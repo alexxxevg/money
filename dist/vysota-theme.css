@@ -23,3 +23,5 @@
 .topbar a.brand,.topbar a.brand:hover,.topbar a.brand:focus{text-decoration:none}
 
 button.edit-pencil{display:inline-grid!important;place-items:center;width:44px!important;height:44px;min-width:44px;flex:0 0 44px;padding:0!important;margin-left:16px;border:1px solid var(--line);background:#f5f1ea!important;color:#805727!important;vertical-align:middle}button.edit-pencil:hover{background:#ede1ce!important}button.edit-pencil svg{display:block;width:20px;height:20px}.stock-actions button.edit-pencil{justify-self:start}.payment-history-item button.edit-pencil{margin-left:0}
+
+button.delete-trash{display:inline-grid!important;place-items:center;width:44px!important;height:44px;min-width:44px;flex:0 0 44px;padding:0!important;margin-left:12px;border:1px solid #e5d8d4;background:#f7efed!important;color:#9b6157!important;vertical-align:middle}button.delete-trash:hover{background:#efded9!important}button.delete-trash svg{display:block;width:20px;height:20px}button.delete-trash:disabled{opacity:.45}
