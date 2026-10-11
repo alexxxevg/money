@@ -12,6 +12,7 @@ export function validateFinance(input){
   }
  }
  if(copy.incomeSources){if(!Array.isArray(copy.incomeSources)||copy.incomeSources.length>1000)fail('Проверьте источники доходов.');const keys=new Set();for(const x of copy.incomeSources){if(!x||typeof x.key!=='string'||x.key.length>400||keys.has(x.key)||typeof x.name!=='string'||!x.name.trim()||x.name.length>100||!['cashback','deposits','dividends','other'].includes(x.group))fail('Проверьте название и группу источника.');keys.add(x.key);}}
+ if(copy.creditCards){if(!Array.isArray(copy.creditCards)||copy.creditCards.length>1000)fail('Проверьте кредитные карты.');for(const card of copy.creditCards){for(const field of ['limit','debt','available'])if(card[field]!==undefined&&(!Number.isSafeInteger(card[field])||Math.abs(card[field])>1e14))fail('Проверьте сумму по кредитной карте.');if(card.available!==undefined&&card.debt!==Math.max(0,card.limit-card.available))fail('Задолженность не соответствует лимиту и остатку.');}}
  for(const k of ['credit','reserved'])if(!Number.isSafeInteger(copy[k])||copy[k]<0)fail('Некорректное обязательство.');
  if(JSON.stringify(copy).length>8000000)fail('Слишком много данных.');return copy;
 }
