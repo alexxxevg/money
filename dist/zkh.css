@@ -6,3 +6,6 @@
 .date-picker{width:min(340px,calc(100% - 28px));padding:18px;border:1px solid var(--line);border-radius:8px}.date-picker-header{display:flex;align-items:center;justify-content:space-between}.date-picker-header strong{text-transform:capitalize}.date-picker-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}.date-picker-grid button{padding:6px;min-height:38px}.date-picker-grid .suggested{border:1px dashed #777;background:#f1f1f1}.date-picker-grid .chosen{background:#242424;color:#fff}.date-picker-week{font-size:11px;text-align:center;padding:8px 0;color:var(--muted)}
 
 .zkh-tax-totals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:20px 0}.zkh-tax-totals strong{display:block;font-size:26px;margin-top:8px;font-variant-numeric:tabular-nums}@media(max-width:540px){.zkh-tax-totals{gap:10px}.zkh-tax-totals strong{font-size:21px}}
+
+/* Compact payment columns keep amount, commission and dates readable. */
+.zkh-payment-grid{table-layout:fixed}.zkh-payment-grid td{min-width:0}.zkh-payment-grid th,.zkh-payment-grid td{padding:8px 6px}.zkh-payment-grid th:first-child,.zkh-payment-grid td:first-child{min-width:0}.zkh-payment-grid input{min-width:0;padding:8px 4px}.zkh-payment-grid thead th{overflow-wrap:anywhere}
