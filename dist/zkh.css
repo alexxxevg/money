@@ -9,3 +9,5 @@
 
 /* Compact payment columns keep amount, commission and dates readable. */
 .zkh-payment-grid{table-layout:fixed}.zkh-payment-grid td{min-width:0}.zkh-payment-grid th,.zkh-payment-grid td{padding:8px 6px}.zkh-payment-grid th:first-child,.zkh-payment-grid td:first-child{min-width:0}.zkh-payment-grid input{min-width:0;padding:8px 4px}.zkh-payment-grid thead th{overflow-wrap:anywhere}
+
+.mobile-payment-review{border:1px solid #cba76d;background:#fbf1de;padding:16px;margin:16px 0;border-radius:6px}.mobile-payment-review>div{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-top:10px}

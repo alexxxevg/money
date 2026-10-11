@@ -1,7 +1,7 @@
 import {setupPolicyFiles,policyFileHandler} from './policy-files.js';
 import {linkFamilyUtilities} from './family-zkh.js';
 import {validateCashback} from './dist/cashback-model.js';
-import {validateZkh,emptyZkh} from './zkh-state.js';
+import {validateZkh,emptyZkh,splitMobileServices} from './zkh-state.js';
 import http from 'node:http';
 import {validateFinance,emptyFinance} from './finance-state.js';
 import { readFile } from 'node:fs/promises';
@@ -22,6 +22,17 @@ await sql`CREATE TABLE IF NOT EXISTS money_finance_backups (id uuid PRIMARY KEY 
 await sql`CREATE TABLE IF NOT EXISTS money_zkh_states (user_id uuid PRIMARY KEY REFERENCES money_users(id) ON DELETE CASCADE, revision integer NOT NULL DEFAULT 0, data jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`;
 await sql`CREATE TABLE IF NOT EXISTS money_zkh_backups (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES money_users(id) ON DELETE CASCADE, import_id text, kind text NOT NULL, data jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now())`;
 await sql`CREATE TABLE IF NOT EXISTS money_cashback_states (user_id uuid PRIMARY KEY REFERENCES money_users(id) ON DELETE CASCADE, revision integer NOT NULL DEFAULT 0, data jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`;
+// Preserve the original state before splitting combined mobile operator payments.
+for(const entry of await sql`SELECT user_id FROM money_zkh_states`){
+ await sql.begin(async tx=>{
+  const [state]=await tx`SELECT data FROM money_zkh_states WHERE user_id=${entry.user_id} FOR UPDATE`;
+  const data=validateZkh(splitMobileServices(state.data));
+  if(JSON.stringify(data)!==JSON.stringify(validateZkh(state.data))){
+   await tx`INSERT INTO money_zkh_backups(user_id,import_id,kind,data) VALUES(${entry.user_id},'mobile-operators-split-v1','before-mobile-split',${tx.json(state.data)})`;
+   await tx`UPDATE money_zkh_states SET data=${tx.json(data)},revision=revision+1,updated_at=now() WHERE user_id=${entry.user_id}`;
+  }
+ });
+}
 const dummyHash = await hashPassword(newToken());
 const limits = new Map();
 setInterval(() => { const now = Date.now(); for (const [k,v] of limits) if (v.until < now) limits.delete(k); sql`DELETE FROM money_sessions WHERE expires_at < now()`.catch(()=>{}); }, 60000).unref();

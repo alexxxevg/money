@@ -24,3 +24,18 @@ export function validateZkh(input){
  for(const x of data.readings)if(!ids.meters.has(x.meterId))fail('Счётчик не найден.');
  if(JSON.stringify(data).length>8000000)fail('Слишком много данных.');return data;
 }
+
+export function splitMobileServices(input){
+ const data=structuredClone(input);
+ for(const source of data.services.filter(s=>/^МТС\s*и\s*СберМобайл$/i.test(s.name.trim()))){
+  const getService=(name,suffix)=>{let service=data.services.find(s=>s.objectId===source.objectId&&s.name===name);if(!service){service={...source,id:source.id+suffix,name};data.services.push(service);}return service;};
+  const mts=getService('МТС','-mts'),sber=getService('СберМобайл','-sber');
+  for(const row of [...data.payments].filter(p=>p.serviceId===source.id)){
+   if(row.amount===65000){const commission=row.commission==null?null:Math.round(row.commission*200/650);data.payments.push({...row,id:row.id+'-sber',serviceId:sber.id,amount:20000,commission});row.serviceId=mts.id;row.amount=45000;if(row.commission!=null)row.commission-=commission;}
+   else if(row.amount!==null&&row.amount>=0&&row.amount<=45000){row.serviceId=mts.id;}
+  }
+  if(data.payments.some(p=>p.serviceId===source.id))source.name='МТС / СберМобайл — уточнить';
+  else data.services=data.services.filter(s=>s.id!==source.id);
+ }
+ return data;
+}
