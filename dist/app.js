@@ -28,7 +28,7 @@ const personName=(e,id)=>e.participants.find(p=>p.personId===id)?.name||'Уча�
 const status=e=>e.closed?'<span class="badge complete">Расчёты завершены</span>':e.collectionClosed?'<span class="badge complete">Сбор завершён</span><span class="badge neutral">Расчёты идут</span>':collectionPhase(e)==='planned'?'<span class="badge neutral">Сбор запланирован</span>':'<span class="badge">Сбор открыт</span>';
 function render(){
  if(!account)return;
- app.innerHTML=`<header class="topbar"><div><a class="brand" href="/" style="text-decoration:none;color:inherit">Высота<em>.</em></a><div class="muted small">Сборы · мероприятия и долги</div></div>${nav(false)}<div class="local"><span class="dot"></span>${esc(sync?.status||'Подключение…')}</div><button class="topicon" data-action="backup" aria-label="Скачать резервную копию">${icon('download')}</button></header><main>${loadError?`<div class="banner" role="alert">${esc(loadError)}</div>`:''}${section==='events'?eventsView():section==='debts'?debtsView():section==='people'?peopleView():settingsView()}</main>${nav(true)}`;
+ app.innerHTML=`<header class="topbar"><div><a class="brand" href="/" style="text-decoration:none;color:inherit">Высота</a><div class="muted small">Сборы · мероприятия и долги</div></div>${nav(false)}<div class="local"><span class="dot"></span>${esc(sync?.status||'Подключение…')}</div><button class="topicon" data-action="backup" aria-label="Скачать резервную копию">${icon('download')}</button></header><main>${loadError?`<div class="banner" role="alert">${esc(loadError)}</div>`:''}${section==='events'?eventsView():section==='debts'?debtsView():section==='people'?peopleView():settingsView()}</main>${nav(true)}`;
 }
 function years(){return [...new Set([currentYear(),year,...data.events.map(e=>Number(e.date.slice(0,4)))])].sort((a,b)=>a-b);}
 function eventsView(){
@@ -162,6 +162,6 @@ async function enter(user){
  sync=new AccountSync(user,incoming=>{data=validateData(incoming);loadError='';if(modal.open)modal.close();render();},()=>render(),()=>{account=null;sync.stop();if(modal.open)modal.close();data=emptyData();loginScreen(app,enter,'Сессия закончилась. Войдите снова. Локальные изменения сохранены.');});
  await sync.start();account=user;render();
 }
-app.innerHTML='<main class="auth-screen"><section class="auth-card"><div class="brand">Высота<em>.</em></div><p role="status">Подключение к аккаунту…</p></section></main>';
+app.innerHTML='<main class="auth-screen"><section class="auth-card"><div class="brand">Высота</div><p role="status">Подключение к аккаунту…</p></section></main>';
 try{const {user}=await api('/api/auth/me');await enter(user);}catch(error){loginScreen(app,enter,error.status===401?'':'Нет связи с сервером. Для входа нужен интернет.');}
 if('serviceWorker' in navigator && window.isSecureContext){navigator.serviceWorker.register('./sw.js').then(()=>navigator.serviceWorker.ready).then(()=>{offlineReady=true;render();}).catch(()=>{offlineReady=false;});}
