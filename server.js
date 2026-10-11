@@ -28,7 +28,7 @@ for(const entry of await sql`SELECT user_id FROM money_zkh_states`){
   const [state]=await tx`SELECT data FROM money_zkh_states WHERE user_id=${entry.user_id} FOR UPDATE`;
   const data=validateZkh(mergeApartmentServices(splitMobileServices(state.data)));
   if(JSON.stringify(data)!==JSON.stringify(validateZkh(state.data))){
-   await tx`INSERT INTO money_zkh_backups(user_id,import_id,kind,data) VALUES(${entry.user_id},'apartment-services-merge-v1','before-services-cleanup',${tx.json(state.data)})`;
+   await tx`INSERT INTO money_zkh_backups(user_id,import_id,kind,data) VALUES(${entry.user_id},'apartment-services-merge-v2','before-services-cleanup',${tx.json(state.data)})`;
    await tx`UPDATE money_zkh_states SET data=${tx.json(data)},revision=revision+1,updated_at=now() WHERE user_id=${entry.user_id}`;
   }
  });

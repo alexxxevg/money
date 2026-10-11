@@ -42,10 +42,10 @@ export function splitMobileServices(input){
 
 export function mergeApartmentServices(input){
  const data=structuredClone(input),groups=new Map();
- const normalize=name=>name.trim().replace(/\s+/g,' ').replace(/^(Электроэнергия|Отопление) ЕИРЦ ТО$/i,'$1').toLocaleLowerCase('ru');
+ const normalize=name=>name.trim().replace(/\s+/g,' ').replace(/^(Электроэнергия|Отопление) ЕИРЦ ТО$/i,'$1').replace(/^(НТС|НТС Дом\.ру|Дом\.ру)$/i,'Дом.ру').toLocaleLowerCase('ru');
  for(const service of data.services){
   if(service.objectId==='services')continue;
-  const key=service.objectId+'|'+normalize(service.name),existing=groups.get(key);
+  const normalized=normalize(service.name);if(normalized==='дом.ру')service.name='Дом.ру';const key=service.objectId+'|'+normalized,existing=groups.get(key);
   if(!existing){groups.set(key,service);continue;}
   for(const payment of data.payments)if(payment.serviceId===service.id)payment.serviceId=existing.id;
   if(existing.required===false&&service.required!==false)existing.required=true;
