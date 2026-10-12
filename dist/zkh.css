@@ -32,3 +32,5 @@
 .zkh-payment-grid button.pending-clock{z-index:3;pointer-events:auto}.zkh-payment-grid td:has(.pending-clock)>.money-display,.zkh-payment-grid td:has(.pending-clock)>input{margin-left:24px;width:calc(100% - 24px)}.zkh-payment-grid td:has(.pending-clock):has(.payment-count-badge)>.money-display{width:calc(100% - 48px)}
 
 .commission-collapsed col:nth-child(3n),.commission-collapsed thead tr:nth-child(2) th:nth-child(3n + 2),.commission-collapsed tbody td:nth-of-type(3n + 2),.commission-collapsed tfoot td:nth-of-type(3n + 2){visibility:collapse;width:0!important;min-width:0!important;padding:0!important;border:0!important}.zkh-payment-grid thead tr:nth-child(2) th:nth-child(3n){position:relative!important}.commission-toggle{position:absolute;left:2px;top:50%;transform:translateY(-50%);padding:0;width:22px;min-width:22px;height:22px;min-height:22px;border:1px solid #d8c6aa;background:#f5ecdf;color:#805727;line-height:1}
+
+.zkh-payment-grid .commission-toggle{left:0;transform:translate(-50%,-50%);z-index:7}
