@@ -28,3 +28,5 @@
 .planned-payments{padding:18px;background:#fbf3e3;border:1px solid #dfc797;border-radius:6px;margin:18px 0}.planned-payments>div{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:12px}.payment-pending{position:relative;color:#95712d}.pending-clock{position:absolute;top:3px;left:5px;font-size:15px;color:#95712d}.payment-pending .money-display-text,.payment-pending input{color:#95712d}
 
 .zkh-payment-grid button.pending-clock{padding:0;width:22px;height:22px;min-width:22px;min-height:22px;line-height:1;background:transparent;border:0;margin:0;cursor:pointer}.zkh-payment-grid button.pending-clock:hover{background:#f2e3c6}
+
+.zkh-payment-grid button.pending-clock{z-index:3;pointer-events:auto}.zkh-payment-grid td:has(.pending-clock)>.money-display,.zkh-payment-grid td:has(.pending-clock)>input{margin-left:24px;width:calc(100% - 24px)}.zkh-payment-grid td:has(.pending-clock):has(.payment-count-badge)>.money-display{width:calc(100% - 48px)}
