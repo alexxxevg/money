@@ -19,6 +19,7 @@ export function validateZkh(input){
    if(x.note!==undefined&&(typeof x.note!=='string'||x.note.length>1000))fail('Слишком длинный комментарий.');
   }
  }
+ for(const payment of data.payments){if(payment.pending!==undefined&&typeof payment.pending!=='boolean')fail('Проверьте статус оплаты.');const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Novosibirsk',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());if(payment.date>today&&payment.amount>0)payment.pending=true;if(payment.amount===0)payment.pending=false;}
  for(const x of [...data.services,...data.meters])if(x.objectId!=='services'&&!ids.objects.has(x.objectId))fail('Объект не найден.');
  for(const x of data.payments)if(!ids.services.has(x.serviceId))fail('Услуга не найдена.');
  for(const x of data.readings)if(!ids.meters.has(x.meterId))fail('Счётчик не найден.');
