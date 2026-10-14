@@ -8,6 +8,7 @@ export function validateFinance(input){
    for(const [field,value]of Object.entries(row))if(['amount','balance','initial','received','revenue','costOverride','revenueOverride','interest','openingBalance2025'].includes(field)&&(!Number.isSafeInteger(value)||Math.abs(value)>1e14))fail('Некорректная денежная сумма.');
    for(const field of ['cost','price','unitCost','unitPrice','quantity','actualQuantity'])if(row[field]!==undefined&&!(key==='cards'&&field==='actualQuantity'&&row[field]===null)&&(!Number.isFinite(row[field])||Math.abs(row[field])>1e14))fail('Некорректное количество или цена.');
    if(key==='incomes'&&!/^20\d\d-(0[1-9]|1[0-2])$/.test(row.month))fail('Некорректный месяц дохода.');
+   if(row.forgiven!==undefined&&(!Number.isSafeInteger(row.forgiven)||row.forgiven<0))fail('Проверьте сумму прощённого долга.');
    if(row.date&&!/^20\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(row.date))fail('Некорректная дата.');
   }
  }
