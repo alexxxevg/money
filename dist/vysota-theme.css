@@ -49,3 +49,44 @@ button[data-fin="account-settings"]{margin-bottom:20px}#modal .fields:has([name=
 .family-operation-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}.family-operation-actions button.edit-pencil,.family-operation-actions button.delete-trash{margin-left:0}
 
 .account-bank-grid{align-items:stretch}.account-bank-panel{display:flex;flex-direction:column;align-self:stretch}.account-bank-total{display:flex;justify-content:space-between;gap:16px;padding:14px 6px;background:#f5f5f5;border-block:1px solid var(--line);font-size:13px;margin-top:auto}.account-bank-table{margin-bottom:0}.account-bank-panel>.account-bank-table{margin-bottom:20px}.mortgage-closed{background:#f4f3ef;color:#77746e}.mortgage-summary-item.mortgage-closed{padding:18px;border-radius:6px}.backup-panel{display:flex;flex-direction:column;align-items:flex-start;gap:18px}.backup-panel>h3,.backup-panel>h2,.backup-panel>p,.backup-panel>button,.backup-panel>label{margin:0}.backup-panel>.field{width:100%;display:flex;flex-direction:column;gap:10px}.backup-panel input[type=file]{padding:14px;background:#faf9f6;border:1px solid var(--line)}.backup-panel button[id*="rollback"],.backup-panel button[data-zkh="rollback"]{margin-top:6px;color:#9b6157}.fin-duo>section:has(.family-summary)>button{margin:0 12px 20px 0}.fin-duo>section:has(.family-summary)>.family-summary{margin-top:24px}.modal-body>#new-account-from-settings{margin-bottom:18px}.fin-nav,.finance-subnav{gap:10px}.grid-toolbar{gap:16px}
+
+/* Compact trial: accounts only. Independent columns avoid stretched empty panels. */
+.accounts-page .accounts-layout{display:grid;gap:14px}
+.accounts-page .panel{padding:18px;min-width:0}
+.accounts-page .panel>h3{margin:0 0 12px}
+.accounts-page .accounts-summary{max-width:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0 20px}
+.accounts-page .accounts-summary>h3{grid-column:1/-1}
+.accounts-page .accounts-summary>.fin-line{flex-direction:column;justify-content:space-between;gap:6px;padding:4px 0;border-bottom:0}
+.accounts-page .accounts-summary>.fin-line>b,.accounts-page .account-row-actions>b{font-size:17px}
+.accounts-page .account-row-actions{gap:8px;min-height:44px}
+.accounts-page .accounts-summary>.fin-line>b{min-height:44px;display:flex;align-items:center}
+.accounts-page .account-bank-grid{gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr))}
+.accounts-page .account-bank-table th,.accounts-page .account-bank-table td{padding:6px 4px}
+.accounts-page .account-bank-panel>.account-bank-table{margin-bottom:12px}
+.accounts-page .account-bank-total{padding:10px 4px}
+.accounts-page button.edit-pencil{margin-left:10px}
+.accounts-page .accounts-details{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+.accounts-page .accounts-detail-column{display:grid;gap:14px;min-width:0}
+.accounts-page .fin-line{align-items:center;padding:8px 0}
+.accounts-page .mortgage-summary-item{gap:10px;padding:14px 0}
+.accounts-page .mortgage-summary-item .fin-metric{font-size:24px;line-height:1.25}
+.accounts-page .mortgage-summary-item.mortgage-closed{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;padding:12px;margin-top:10px}
+.accounts-page .mortgage-closed>.badge{grid-column:2;grid-row:1;justify-self:end}
+.accounts-page .mortgage-closed>h3{grid-column:1;grid-row:1;margin:0}
+.accounts-page .mortgage-closed>.fin-metric{grid-column:2;grid-row:2;font-size:18px;justify-self:end}
+.accounts-page .mortgage-closed>.muted{grid-column:1;grid-row:2;font-size:12px}
+.accounts-page .mortgage-closed>.fin-payments{grid-column:1/-1}
+.accounts-page .family-panel>button{margin:0 10px 14px 0}
+.accounts-page .family-panel>.family-summary{margin:16px 0}
+.accounts-page .backup-panel{gap:12px}
+@media(max-width:1150px){.accounts-page .accounts-summary{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 18px}}
+@media(max-width:760px){
+ .accounts-page .accounts-summary{display:block}
+ .accounts-page .accounts-summary>.fin-line{flex-direction:row;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+ .accounts-page .accounts-summary>.fin-line>b{min-height:0;font-size:14px}
+ .accounts-page .account-row-actions>b{font-size:14px}
+ .accounts-page .accounts-details{grid-template-columns:minmax(0,1fr)}
+ .accounts-page .accounts-detail-column{display:contents}
+ .accounts-page .credit-summary{order:1}.accounts-page .mortgage-summary{order:2}.accounts-page .family-panel{order:3}.accounts-page .backup-panel{order:4}
+ .accounts-page .panel{padding:16px}
+}
