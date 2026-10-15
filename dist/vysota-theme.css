@@ -90,3 +90,21 @@ button[data-fin="account-settings"]{margin-bottom:20px}#modal .fields:has([name=
  .accounts-page .credit-summary{order:1}.accounts-page .mortgage-summary{order:2}.accounts-page .family-panel{order:3}.accounts-page .backup-panel{order:4}
  .accounts-page .panel{padding:16px}
 }
+
+/* Credit cards belong to their bank; credit limits stay outside own funds. */
+.account-credit{padding-top:12px;border-top:1px solid var(--line)}
+.account-credit-top{display:grid;grid-template-columns:minmax(0,1fr) auto 44px;gap:10px;align-items:center;font-size:13px}
+.account-credit-available{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.account-credit-available small{display:block;color:var(--muted);font-size:11px}
+.account-credit-meta{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 12px;margin-top:8px;color:var(--muted);font-size:12px}
+.account-credit-meta strong{color:var(--ink);white-space:nowrap}
+.account-credit+.account-credit{margin-top:12px}
+.account-credit-top button.edit-pencil{margin-left:0}
+.accounts-page .account-bank-panel{display:grid;grid-template-rows:subgrid;grid-row:span 4;row-gap:12px}
+.accounts-page .account-bank-panel>.account-bank-title{margin:0}
+.accounts-page .account-bank-panel>.account-bank-table{margin:0;align-self:start}
+.accounts-page .account-bank-total{margin:0;align-self:end}
+.accounts-page .account-credit-top button.edit-pencil{margin-left:0}
+.accounts-page .account-bank-credit-slot:empty{padding:0}
+.ledger-grid .account-credit-row>td{padding:12px!important;text-align:left!important;background:var(--surface)}
+.ledger-grid .account-credit{border:0;padding:0;max-width:540px}
