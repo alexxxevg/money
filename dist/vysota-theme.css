@@ -93,14 +93,14 @@ button[data-fin="account-settings"]{margin-bottom:20px}#modal .fields:has([name=
 
 /* Credit cards belong to their bank; credit limits stay outside own funds. */
 .account-credit{padding-top:12px;border-top:1px solid var(--line)}
-.account-credit-top{display:grid;grid-template-columns:minmax(0,1fr) auto 44px;gap:10px;align-items:center;font-size:13px}
+.account-credit-top{display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:10px;align-items:center;font-size:13px}
 .account-credit-available{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .account-credit-available small{display:block;color:var(--muted);font-size:11px}
-.account-credit-meta{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 12px;margin-top:8px;color:var(--muted);font-size:12px}
+.account-credit-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px;color:var(--muted);font-size:12px}
 .account-credit-meta strong{color:var(--ink);white-space:nowrap}
 .account-credit+.account-credit{margin-top:12px}
 .account-credit-top button.edit-pencil{margin-left:0}
-.accounts-page .account-bank-panel{display:grid;grid-template-rows:subgrid;grid-row:span 4;row-gap:12px}
+.accounts-page .account-bank-panel{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:subgrid;grid-row:span 4;row-gap:12px}
 .accounts-page .account-bank-panel>.account-bank-title{margin:0}
 .accounts-page .account-bank-panel>.account-bank-table{margin:0;align-self:start}
 .accounts-page .account-bank-total{margin:0;align-self:end}
@@ -110,3 +110,5 @@ button[data-fin="account-settings"]{margin-bottom:20px}#modal .fields:has([name=
 .ledger-grid .account-credit{border:0;padding:0;max-width:540px}
 
 .reserve-fields{display:grid;gap:16px;margin-bottom:18px}.reserve-fields>.field{margin:0}.reserve-total{display:flex;justify-content:space-between;gap:16px;padding:14px 0;border-block:1px solid var(--line);font-size:18px}.reserve-breakdown{margin:16px 0}.reserve-breakdown>summary{color:var(--brand);padding:8px 0}.reserve-table-wrap{overflow:auto}.reserve-breakdown table{width:100%;border-collapse:collapse;font-size:12px}.reserve-breakdown th,.reserve-breakdown td{padding:8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}.reserve-breakdown th:first-child{text-align:left}.reserve-warning{padding:12px;background:#fcf4e3;border:1px solid #ebd3a6;border-radius:5px;font-size:13px}
+
+.account-credit-meta>span{display:flex;flex-direction:column;gap:2px;text-align:left}.account-credit-meta>span:nth-child(2){text-align:center}.account-credit-meta>span:last-child{text-align:right}.account-credit-meta .account-credit-available small{font-size:12px}.account-credit-meta strong{font-variant-numeric:tabular-nums}
