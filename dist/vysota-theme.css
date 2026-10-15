@@ -108,3 +108,5 @@ button[data-fin="account-settings"]{margin-bottom:20px}#modal .fields:has([name=
 .accounts-page .account-bank-credit-slot:empty{padding:0}
 .ledger-grid .account-credit-row>td{padding:12px!important;text-align:left!important;background:var(--surface)}
 .ledger-grid .account-credit{border:0;padding:0;max-width:540px}
+
+.reserve-fields{display:grid;gap:16px;margin-bottom:18px}.reserve-fields>.field{margin:0}.reserve-total{display:flex;justify-content:space-between;gap:16px;padding:14px 0;border-block:1px solid var(--line);font-size:18px}.reserve-breakdown{margin:16px 0}.reserve-breakdown>summary{color:var(--brand);padding:8px 0}.reserve-table-wrap{overflow:auto}.reserve-breakdown table{width:100%;border-collapse:collapse;font-size:12px}.reserve-breakdown th,.reserve-breakdown td{padding:8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}.reserve-breakdown th:first-child{text-align:left}.reserve-warning{padding:12px;background:#fcf4e3;border:1px solid #ebd3a6;border-radius:5px;font-size:13px}
