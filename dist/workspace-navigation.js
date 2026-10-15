@@ -2,6 +2,7 @@ export function installWorkspaceNavigation(){
  installEditButtons();
  installDeleteButtons();
  installFutureIncome();
+ installBackupPanels();
  const paths=[['/cashback','Кэшбэки','<rect x="4" y="6" width="16" height="12" rx="2"/><path d="M4 10h16m-11 4h4"/>'],['/sb','Сборы','<ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 4 14 4 14 0V6M5 12c0 4 14 4 14 0"/>'],['/finance','Доход','<path d="M5 20v-6h3v6m3 0V9h3v11m3 0V4h3v16"/>'],['/zkh','Платежи','<path d="m3 11 9-8 9 8M6 9v12h12V9M10 21v-7h4v7"/>']];
  const sidebar=document.createElement('aside');sidebar.className='workspace-sidebar';sidebar.innerHTML=`<a class="workspace-logo" href="/"><img src="/icon-192.png" width="44" height="44" alt=""><span>Высота</span></a><nav aria-label="Разделы приложения">${paths.map(([url,label,icon])=>`<a href="${url}" ${location.pathname.replace(/\/$/,'')===url?'aria-current="page"':''}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">${icon}</svg><span>${label}</span></a>`).join('')}</nav><a class="workspace-home" href="/">Все разделы ↗</a>`;document.body.append(sidebar);
  const root=document.getElementById('app');const refresh=()=>document.body.classList.toggle('workspace-active',!!root.querySelector('.topbar'));new MutationObserver(refresh).observe(root,{childList:true});refresh();
@@ -41,3 +42,5 @@ export function confirmDeletion(message){
 }
 
 function installFutureIncome(){const refresh=()=>{if(location.pathname!=='/finance')return;const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Novosibirsk',year:'numeric',month:'2-digit'}).formatToParts(new Date()),current=parts.find(x=>x.type==='year').value+'-'+parts.find(x=>x.type==='month').value;for(const row of document.querySelectorAll('.finance-grid tbody tr')){const raw=row.dataset.period||row.dataset.month,year=document.getElementById('fin-year')?.value;const period=raw&&raw.length===2&&year?year+'-'+raw:raw; if(period)row.classList.toggle('income-future',period>current);}};new MutationObserver(refresh).observe(document.getElementById('app'),{childList:true,subtree:true});refresh();}
+
+function installBackupPanels(){const refresh=()=>{for(const panel of document.querySelectorAll('section.panel')){const title=panel.querySelector('h3,h2');if(title&&/История и резервные копии|Резервное копирование|Резервные копии|Перенос истории/.test(title.textContent))panel.classList.add('backup-panel');}};new MutationObserver(refresh).observe(document.getElementById('app'),{childList:true,subtree:true});refresh();}
