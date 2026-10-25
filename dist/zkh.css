@@ -34,3 +34,7 @@
 .commission-collapsed col:nth-child(3n),.commission-collapsed thead tr:nth-child(2) th:nth-child(3n + 2),.commission-collapsed tbody td:nth-of-type(3n + 2),.commission-collapsed tfoot td:nth-of-type(3n + 2){visibility:collapse;width:0!important;min-width:0!important;padding:0!important;border:0!important}.zkh-payment-grid thead tr:nth-child(2) th:nth-child(3n){position:relative!important}.commission-toggle{position:absolute;left:2px;top:50%;transform:translateY(-50%);padding:0;width:22px;min-width:22px;height:22px;min-height:22px;border:1px solid #d8c6aa;background:#f5ecdf;color:#805727;line-height:1}
 
 .zkh-payment-grid .commission-toggle{left:0;transform:translate(-50%,-50%);z-index:7}
+
+.batch-meter-sections{display:grid;gap:20px;margin:18px 0}.batch-meter-object{border:1px solid #e2ded7;border-radius:6px;padding:16px}.batch-meter-object h3{margin:0 0 14px}.batch-meter-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 14px;padding:12px 0;border-top:1px solid #e2ded7}.batch-meter-row .field{margin:0;min-width:0}.batch-meter-row input{width:100%;min-width:0;box-sizing:border-box}.batch-meter-row small{grid-column:1/-1}.batch-meter-row:first-of-type{border-top:0;padding-top:0}@media(max-width:520px){.batch-meter-row{grid-template-columns:minmax(0,1fr)}.zkh-main .row.between:has([data-zkh="batch-readings"]){flex-wrap:wrap;gap:10px}}
+
+.batch-meter-actions{display:flex;flex-wrap:wrap;gap:10px}.batch-meter-actions button{white-space:normal}
