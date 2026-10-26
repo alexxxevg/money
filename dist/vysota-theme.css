@@ -114,3 +114,5 @@ button[data-fin="account-settings"]{margin-bottom:20px}#modal .fields:has([name=
 .account-credit-meta>span{display:flex;flex-direction:column;gap:2px;text-align:left}.account-credit-meta>span:nth-child(2){text-align:center}.account-credit-meta>span:last-child{text-align:right}.account-credit-meta .account-credit-available small{font-size:12px}.account-credit-meta strong{font-variant-numeric:tabular-nums}
 
 .account-settings-row{display:grid;gap:10px;padding:14px 0;border-bottom:1px solid var(--line)}.account-settings-row:last-child{border-bottom:0}.account-settings-row>.field,.account-settings-row>.check{margin:0}.account-settings-row input[type=text]{width:100%;min-width:0}.account-balance-name{margin:0 0 18px;font-size:15px;color:var(--ink)}
+
+.section-sync{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:10px 0;color:#6b655c;font-size:13px;line-height:1.5}.section-sync span{flex:1;min-width:180px}.section-sync button{padding:8px 12px;font-size:13px}.section-sync button[hidden]{display:none}

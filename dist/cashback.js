@@ -1,3 +1,6 @@
+import {SectionSync,loadSection} from './section-sync.js';
+import {mergeSectionDraft} from './section-operations.js';
+import {statesEqual} from './sync-operations.js';
 import {pagePreferences,confirmDeletion} from './workspace-navigation.js';
 import {api} from './auth.js';
 import {bankLogo} from './finance-bank-header.js';
@@ -5,7 +8,7 @@ import {upgradeCashback,compareBanks,categoryRank} from './cashback-model.js';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export async function startCashback(root,user){
  const style=document.createElement('link');style.rel='stylesheet';style.href='/finance.css';document.head.insertBefore(style,document.querySelector('link[href="./vysota-theme.css"]'));
- const loaded=await api('/api/cashback');let data=upgradeCashback(loaded.data),revision=loaded.revision;
+ const loaded=await loadSection(user.id,'cashback');let data=upgradeCashback(loaded.data),revision=loaded.revision;
  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Novosibirsk',year:'numeric',month:'2-digit'}).formatToParts(new Date());
  let period=parts.find(p=>p.type==='year').value+'-'+parts.find(p=>p.type==='month').value,timer,busy=false,pending=false,dirty=false,failed=false,view='categories',search='';
  const preferences=pagePreferences(user.id,'cashback'),savePreferences=()=>preferences.write({period,view,search});({period,view,search}=preferences.read({period,view,search}));window.addEventListener('beforeunload',savePreferences);
@@ -22,12 +25,13 @@ export async function startCashback(root,user){
  function history(){const used=new Set(recordedNames().map(n=>n.toLocaleLowerCase('ru')));return data.categories.filter(n=>used.has(n.toLocaleLowerCase('ru'))||favorite(n));}
  function suggestions(){root.querySelector('#cashback-categories').innerHTML=history().map(c=>`<option value="${esc(c)}"></option>`).join('');}
  function remember(name){if(!name?.trim())return;data.categories=[...new Set([...data.categories,name.trim()])];cleanCategories();}
+ const sync=new SectionSync({user:user.id,section:'cashback',root,initial:{...loaded,data,revision},getData:()=>data,canApply:()=>!dirty&&!busy&&!document.querySelector('dialog[open]')&&!root.contains(document.activeElement?.closest('input,textarea')),onData:(incoming,rev)=>{data=upgradeCashback(incoming);revision=rev;dirty=false;failed=false;render();}});data=upgradeCashback(sync.value.data);revision=sync.value.revision;
  const oldCategories=JSON.stringify(data.categories);data.categories=[...new Set([...data.categories,...recordedNames()])];cleanCategories();dirty=oldCategories!==JSON.stringify(data.categories);
  function sortCards(){const grid=root.querySelector('#cashback-cards');if(grid?.contains(document.activeElement))return;if(grid)orderedBanks().forEach(b=>{const card=[...grid.children].find(e=>e.dataset.bank===b.id);if(card){grid.append(card);const body=card.querySelector('tbody'),rows=[...body.children];rows.sort((a,rowB)=>{const x=(entries()[b.id]||[])[Number(a.dataset.index)],y=(entries()[b.id]||[])[Number(rowB.dataset.index)];return Number(favorite(y.name))-Number(favorite(x.name))||categoryRank(x.name)-categoryRank(y.name)||Number(a.dataset.index)-Number(rowB.dataset.index);}).forEach(r=>body.append(r));}});}
  function valid(){return data.banks.every(b=>b.name.trim())&&Object.values(data.months).every(m=>Object.values(m).every(rows=>rows.every(r=>r.percent===null||Number.isFinite(r.percent)&&r.percent>=0&&r.percent<=100)));}
- function changed(){dirty=true;failed=false;status(valid()?'Сохранение…':'Укажите название банка и процент от 0 до 100.');clearTimeout(timer);timer=setTimeout(save,650);}
+ function changed(){sync.setStatus('Есть несохранённые изменения');dirty=true;failed=false;status(valid()?'Сохранение…':'Укажите название банка и процент от 0 до 100.');clearTimeout(timer);timer=setTimeout(save,650);}
  async function save(){clearTimeout(timer);if(busy){pending=true;return;}if(!dirty)return;if(!valid()){status('Укажите название банка и процент от 0 до 100.');return;}busy=true;pending=false;failed=false;status('Сохранение…');const snapshot=structuredClone(data);
-  try{const result=await api('/api/cashback',{method:'PUT',body:JSON.stringify({revision,data:snapshot})});revision=result.revision;dirty=JSON.stringify(data)!==JSON.stringify(snapshot);status(dirty?'Сохранение…':'Все изменения сохранены');}
+  try{const result=await sync.save(snapshot);revision=result.revision;const newer=!statesEqual(data,snapshot);data=mergeSectionDraft('cashback',result.data,snapshot,data);dirty=newer;status(dirty?'Сохранение…':'Все изменения сохранены');}
   catch(e){failed=true;status(e.message+' Введённые данные остаются на экране.');}
   finally{busy=false;if(!failed&&(pending||dirty))save();}
  }
@@ -53,5 +57,5 @@ export async function startCashback(root,user){
  root.querySelector('#cashback-export').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify({format:'money-cashback-backup-v2',data},null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='cashback-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
  root.querySelector('#cashback-logout').onclick=async()=>{if(dirty||busy){status('Дождитесь сохранения данных перед выходом.');return;}await api('/api/auth/logout',{method:'POST',body:'{}'});location.href='/';};
  }
- window.addEventListener('beforeunload',e=>{if(dirty||busy){e.preventDefault();e.returnValue='';}});render();if(dirty)timer=setTimeout(save,650);
+ window.addEventListener('beforeunload',e=>{if(dirty||busy){e.preventDefault();e.returnValue='';}});render();sync.start();if(dirty)timer=setTimeout(save,650);
 }
