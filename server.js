@@ -1,3 +1,4 @@
+import {applyOperations,statesEqual} from './dist/sync-operations.js';
 import {applyReserve} from './dist/finance-reserve.js';
 import {setupPolicyFiles,policyFileHandler} from './policy-files.js';
 import {linkFamilyUtilities} from './family-zkh.js';
@@ -18,6 +19,7 @@ const cookieName = secure ? '__Host-money_session' : 'money_session';
 await sql`CREATE TABLE IF NOT EXISTS money_users (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), email text NOT NULL UNIQUE, name text NOT NULL, password_hash text NOT NULL, created_at timestamptz NOT NULL DEFAULT now())`;
 await sql`CREATE TABLE IF NOT EXISTS money_sessions (token_hash text PRIMARY KEY, user_id uuid NOT NULL REFERENCES money_users(id) ON DELETE CASCADE, expires_at timestamptz NOT NULL)`;
 await sql`CREATE TABLE IF NOT EXISTS money_states (user_id uuid PRIMARY KEY REFERENCES money_users(id) ON DELETE CASCADE, revision integer NOT NULL DEFAULT 0, data jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`;
+await sql`CREATE TABLE IF NOT EXISTS money_state_operations (user_id uuid NOT NULL REFERENCES money_users(id) ON DELETE CASCADE, operation_id uuid NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(user_id,operation_id))`;
 await sql`CREATE TABLE IF NOT EXISTS money_finance_states (user_id uuid PRIMARY KEY REFERENCES money_users(id) ON DELETE CASCADE, revision integer NOT NULL DEFAULT 0, data jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`;
 await sql`CREATE TABLE IF NOT EXISTS money_finance_backups (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES money_users(id) ON DELETE CASCADE, import_id text, kind text NOT NULL, data jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now())`;
 await sql`CREATE TABLE IF NOT EXISTS money_zkh_states (user_id uuid PRIMARY KEY REFERENCES money_users(id) ON DELETE CASCADE, revision integer NOT NULL DEFAULT 0, data jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`;
@@ -54,7 +56,7 @@ async function current(req) {
   const [user] = await sql`SELECT u.id,u.name,u.email FROM money_users u JOIN money_sessions s ON s.user_id=u.id WHERE s.token_hash=${tokenHash(raw)} AND s.expires_at>now()`;
   return user ? { user, hash:tokenHash(raw) } : null;
 }
-const assets = new Map(Object.entries({ '/':'index.html', '/index.html':'index.html', '/sb':'index.html', '/sb/':'index.html', '/finance':'index.html', '/finance/':'index.html', '/zkh':'index.html', '/zkh/':'index.html', '/cashback':'index.html', '/cashback/':'index.html', '/cashback.js':'cashback.js', '/cashback-model.js':'cashback-model.js', '/money-display.js':'money-display.js', '/workspace-navigation.js':'workspace-navigation.js', '/vysota-theme.css':'vysota-theme.css', '/portal.js':'portal.js', '/zkh.js':'zkh.js', '/zkh.css':'zkh.css', '/finance.js':'finance.js', '/finance-reserve.js':'finance-reserve.js', '/finance-tables.js':'finance-tables.js', '/finance-import.js':'finance-import.js', '/finance-bank-header.js':'finance-bank-header.js', '/finance-ledgers.js':'finance-ledgers.js', '/finance.css':'finance.css', '/app.js':'app.js', '/app.css':'app.css', '/model.js':'model.js', '/auth.js':'auth.js', '/sw.js':'sw.js', '/manifest.webmanifest':'manifest.webmanifest', '/event-corporate.png':'event-corporate.png', '/event-themes.png':'event-themes.png', '/icon.svg':'icon.svg', '/icon-192.png':'icon-192.png', '/icon-512.png':'icon-512.png', '/icon-maskable.png':'icon-maskable.png' }));
+const assets = new Map(Object.entries({ '/':'index.html', '/index.html':'index.html', '/sb':'index.html', '/sb/':'index.html', '/finance':'index.html', '/finance/':'index.html', '/zkh':'index.html', '/zkh/':'index.html', '/cashback':'index.html', '/cashback/':'index.html', '/cashback.js':'cashback.js', '/cashback-model.js':'cashback-model.js', '/money-display.js':'money-display.js', '/workspace-navigation.js':'workspace-navigation.js', '/vysota-theme.css':'vysota-theme.css', '/portal.js':'portal.js', '/zkh.js':'zkh.js', '/zkh.css':'zkh.css', '/finance.js':'finance.js', '/finance-reserve.js':'finance-reserve.js', '/finance-tables.js':'finance-tables.js', '/finance-import.js':'finance-import.js', '/finance-bank-header.js':'finance-bank-header.js', '/finance-ledgers.js':'finance-ledgers.js', '/finance.css':'finance.css', '/app.js':'app.js', '/app.css':'app.css', '/model.js':'model.js', '/auth.js':'auth.js', '/sync-operations.js':'sync-operations.js', '/sw.js':'sw.js', '/manifest.webmanifest':'manifest.webmanifest', '/event-corporate.png':'event-corporate.png', '/event-themes.png':'event-themes.png', '/icon.svg':'icon.svg', '/icon-192.png':'icon-192.png', '/icon-512.png':'icon-512.png', '/icon-maskable.png':'icon-maskable.png' }));
 const mime = { html:'text/html', js:'text/javascript', css:'text/css', webmanifest:'application/manifest+json', svg:'image/svg+xml', png:'image/png' };
 await setupPolicyFiles(sql);
 const handlePolicyFile=policyFileHandler({sql,send,fail});
@@ -194,11 +196,20 @@ const server = http.createServer(async (req,res) => {
       }
       if (path==='/api/state' && req.method==='PUT') {
         const input=await body(req); if (!Number.isSafeInteger(input.revision)||input.revision<0) fail(400,'Некорректная версия.');
-        const [previous]=await sql`SELECT data FROM money_states WHERE user_id=${session.user.id} AND revision=${input.revision}`;
-        if(!previous)fail(409,'На другом устройстве уже появились изменения. Загрузите актуальные данные.');
-        let data; try{data=validateData(preserveLegacyFields(input.data,previous.data));}catch{fail(400,'Данные не прошли проверку.');}
-        const [saved] = await sql`UPDATE money_states SET data=${sql.json(data)}, revision=revision+1, updated_at=now() WHERE user_id=${session.user.id} AND revision=${input.revision} RETURNING revision`;
-        if (!saved) fail(409,'На другом устройстве уже появились изменения. Скачайте свою копию и загрузите актуальные данные.');
+        const saved=await sql.begin(async tx=>{
+          const [previous]=await tx`SELECT revision,data FROM money_states WHERE user_id=${session.user.id} FOR UPDATE`;
+          if(input.operations){
+            if(typeof input.operationId!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.operationId))fail(400,'Некорректный номер отправки.');
+            const [receipt]=await tx`SELECT operation_id FROM money_state_operations WHERE user_id=${session.user.id} AND operation_id=${input.operationId}`;
+            if(receipt)return previous;
+          }
+          if(!input.operations&&previous.revision!==input.revision)fail(409,'На другом устройстве уже появились изменения. Загрузите актуальные данные.');
+          let data;try{data=validateData(input.operations?applyOperations(previous.data,input.operations,input.guards):preserveLegacyFields(input.data,previous.data));}catch(error){if(error.status===409)throw error;if(input.operations)fail(409,'Изменения нельзя безопасно объединить с данными другого устройства. Локальная копия сохранена. Скачайте её в настройках перед загрузкой данных с сервера.');fail(400,'Данные не прошли проверку.');}
+          if(input.operations)await tx`INSERT INTO money_state_operations(user_id,operation_id) VALUES(${session.user.id},${input.operationId})`;
+          if(statesEqual(data,previous.data))return {revision:previous.revision,data};
+          const [updated]=await tx`UPDATE money_states SET data=${tx.json(data)},revision=revision+1,updated_at=now() WHERE user_id=${session.user.id} RETURNING revision,data`;
+          return updated;
+        });
         return send(res,200,saved);
       }
       fail(404,'Не найдено.');

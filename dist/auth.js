@@ -1,3 +1,4 @@
+import {operationsBetween,eventGuards,applyOperations,statesEqual} from './sync-operations.js';
 import {validateData} from './model.js';
 export async function api(path, options={}) {
   const response=await fetch(path,{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(12000),...options,headers:{'Content-Type':'application/json',...options.headers}});
@@ -10,47 +11,54 @@ export class AccountSync {
   async start(){
     const state=await api('/api/state');
     const cached=localStorage.getItem(this.key);
-    if(cached){try{const value=JSON.parse(cached);validateData(value.data);if(value.pending){this.value=value;if(value.revision!==state.revision)this.conflict();}}catch{throw new Error('Копия устройства повреждена. Данные сохранены для восстановления.');}}
-    if(!this.value)this.value={...state,pending:false};
+    if(cached){try{const value=JSON.parse(cached);validateData(value.data);if(value.pending){this.value=value;if(value.revision!==state.revision&&!value.base)this.conflict();}}catch{throw new Error('Копия устройства повреждена. Данные сохранены для восстановления.');}}
+    if(!this.value)this.value={...state,pending:false,base:structuredClone(state.data)};
+    if(!this.value.pending)this.value.base=structuredClone(this.value.data);
+    else if(!this.value.base&&this.value.revision===state.revision)this.value.base=structuredClone(state.data);
     this.persist();this.onChange(this.value.data);await this.tick();
-    this.timer=setInterval(()=>this.tick(),15000);
+    this.timer=setInterval(()=>this.wake?.(),5000);
+    this.wake=()=>{if(globalThis.document?.visibilityState!=='hidden')this.tick();};
+    window.addEventListener('focus',this.wake);window.addEventListener('pageshow',this.wake);globalThis.document?.addEventListener('visibilitychange',this.wake);
     this.online=()=>this.tick();window.addEventListener('online',this.online);
-    this.storage=ev=>{if(ev.key===this.key){if(!ev.newValue){this.onExpired();return;}try{this.value=JSON.parse(ev.newValue);validateData(this.value.data);this.onChange(this.value.data);this.tick();}catch{this.conflict();}}};window.addEventListener('storage',this.storage);
+    this.storage=ev=>{if(ev.key===this.key){if(!ev.newValue){this.onExpired();return;}try{const incoming=JSON.parse(ev.newValue);validateData(incoming.data);if(incoming.pending&&this.value.pending&&JSON.stringify(incoming.data)!==JSON.stringify(this.value.data)){this.conflict();return;}this.value=incoming;this.raw=ev.newValue;this.onChange(this.value.data);this.tick();}catch{this.conflict();}}};window.addEventListener('storage',this.storage);
   }
   persist(){const raw=JSON.stringify(this.value);localStorage.setItem(this.key,raw);this.raw=raw;}
   setStatus(text){this.status=text;this.onStatus();}
-  conflict(){this.blocked=true;this.setStatus('Изменения на другом устройстве');}
+  conflict(message){this.conflictMessage=message||'';this.blocked=true;this.setStatus('Изменения на другом устройстве');}
   save(data){
-    if(this.blocked)throw new Error('Сначала сохраните копию и загрузите изменения с сервера в настройках.');
+    if(this.blocked)throw new Error(this.conflictMessage||'Сначала сохраните копию и загрузите изменения с сервера в настройках.');
     if(localStorage.getItem(this.key)!==this.raw)throw new Error('Данные изменились в другой вкладке. Повторите действие.');
-    const previous=this.value;this.value={...this.value,data:structuredClone(data),pending:true};
+    const previous=this.value;this.value={...this.value,base:this.value.base||structuredClone(this.value.data),data:structuredClone(data),pending:true};
     try{this.persist();}catch(error){this.value=previous;throw error;}
     this.setStatus('Сохранено на устройстве · ожидает синхронизации');this.tick();
   }
   async tick(){
-    if(this.busy||this.blocked||this.stopped)return;
+    if(this.busy){this.again=true;return this.inFlight;}if(this.blocked||this.stopped)return;
     if(!navigator.onLine){this.setStatus(this.value.pending?'Без интернета · изменения сохранены':'Без интернета');return;}
-    this.busy=true;
+    this.busy=true;this.inFlight=new Promise(resolve=>this.finish=resolve);
     try{
       if(this.value.pending){
-        const snapshot=structuredClone(this.value), raw=this.raw;
-        const saved=await api('/api/state',{method:'PUT',body:JSON.stringify({revision:snapshot.revision,data:snapshot.data})});
+        if(this.value.base&&!this.value.request){const operations=operationsBetween(this.value.base,this.value.data);this.value.request={id:globalThis.crypto.randomUUID(),operations,guards:eventGuards(this.value.base,operations),data:structuredClone(this.value.data)};this.persist();}
+        const snapshot=structuredClone(this.value),request=snapshot.request,uploadedData=request?.data||snapshot.data;
+        const saved=await api('/api/state',{method:'PUT',body:JSON.stringify(request?{revision:snapshot.revision,operationId:request.id,operations:request.operations,guards:request.guards}:{revision:snapshot.revision,data:snapshot.data})});
         // Another tab may have changed the same local cache during this request.
         if(localStorage.getItem(this.key)!==this.raw){this.conflict();return;}
-        this.value.revision=saved.revision;
-        if(this.raw===raw)this.value.pending=false;
-        this.persist();
+        const serverData=saved.data||uploadedData;
+        const editedDuringUpload=!statesEqual(this.value.data,uploadedData);
+        const merged=editedDuringUpload?applyOperations(serverData,operationsBetween(uploadedData,this.value.data),eventGuards(uploadedData,operationsBetween(uploadedData,this.value.data))):serverData;
+        this.value={revision:saved.revision,data:validateData(merged),base:structuredClone(serverData),pending:editedDuringUpload};
+        this.persist();this.onChange(this.value.data);
       }else{
         const expected=this.raw, state=await api('/api/state');
         if(this.raw!==expected||this.value.pending)return;
-        if(state.revision!==this.value.revision){this.value={...state,pending:false};this.persist();this.onChange(validateData(state.data));}
+        if(state.revision!==this.value.revision){this.value={...state,pending:false,base:structuredClone(state.data)};this.persist();this.onChange(validateData(state.data));}
       }
-      this.setStatus(this.value.pending?'Ожидает синхронизации':'Синхронизировано');
-    }catch(error){if(error.status===409)this.conflict();else if(error.status===401){this.blocked=true;this.onExpired();}else this.setStatus('Нет связи с сервером · данные на устройстве');}
-    finally{this.busy=false;if(this.value?.pending&&!this.blocked&&navigator.onLine&&this.status==='Ожидает синхронизации')queueMicrotask(()=>this.tick());}
+      this.setStatus(this.value.pending?'Ожидает синхронизации':'Сохранено на сервере');
+    }catch(error){if(error.status===409)this.conflict(error.message);else if(error.status===401){this.blocked=true;this.onExpired();}else this.setStatus('Нет связи с сервером · данные на устройстве');}
+    finally{this.busy=false;this.finish?.();this.inFlight=null;const again=this.again;this.again=false;if(!this.stopped&&!this.blocked&&navigator.onLine&&(again||this.value?.pending&&this.status==='Ожидает синхронизации'))queueMicrotask(()=>this.tick());}
   }
-  async loadServer(){if(this.busy)throw new Error('Дождитесь окончания синхронизации.');const state=await api('/api/state');this.value={...state,pending:false};this.persist();this.blocked=false;this.onChange(validateData(state.data));this.setStatus('Синхронизировано');}
-  stop(){this.stopped=true;clearInterval(this.timer);window.removeEventListener('online',this.online);window.removeEventListener('storage',this.storage);}
+  async loadServer(){if(this.busy)throw new Error('Дождитесь окончания синхронизации.');const state=await api('/api/state');this.value={...state,pending:false,base:structuredClone(state.data)};this.persist();this.blocked=false;this.onChange(validateData(state.data));this.setStatus('Сохранено на сервере');}
+  stop(){this.stopped=true;clearInterval(this.timer);window.removeEventListener('online',this.online);window.removeEventListener('storage',this.storage);window.removeEventListener('focus',this.wake);window.removeEventListener('pageshow',this.wake);globalThis.document?.removeEventListener('visibilitychange',this.wake);}
 }
 export function loginScreen(root,onLogin,message=''){
   let register=false;
